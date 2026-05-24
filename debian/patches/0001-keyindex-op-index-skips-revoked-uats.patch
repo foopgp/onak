@@ -1,4 +1,4 @@
-Description: op=index skips revoked UATs
+Description: op=index skips revoked UATs (with imgindx kept in sync)
  In op=index (the compact public listing), revoked User Attribute Packets
  (photos whose owner has issued a 0x30 certification revocation on them)
  used to be shown like any other UAT — adding visual clutter without
@@ -11,13 +11,20 @@ Description: op=index skips revoked UATs
  revocations: signature version 4 or 5, sigtype 0x30. No attempt is made
  to authenticate which key issued the revocation; the listing is a
  display, not a trust decision.
+ .
+ imgindx is captured *before* the skip and always incremented, because
+ op=photo's getphoto() iterates over every UAT in the key (revoked or
+ not) and counts them with the same stride. Leaving skipped UATs out of
+ the count would desync the HTML idx=N we emit from the index getphoto()
+ looks up — making the browser fetch the wrong (typically: revoked)
+ photo blob for what is shown as the valid UAT.
 Author: Mnêmê <mneme@foopgp.org>
-Origin: upstream-candidate, https://codeberg.org/foopgp/onak/pulls/(tbd)
-Forwarded: not-yet
+Origin: upstream, https://github.com/u1f35c/onak/pull/4
+Forwarded: https://github.com/u1f35c/onak/pull/4
 Last-Update: 2026-05-24
 
 diff --git a/keyindex.c b/keyindex.c
-index 3ce8735..6377d1b 100644
+index 3ce8735..50ae1e1 100644
 --- a/keyindex.c
 +++ b/keyindex.c
 @@ -270,6 +270,34 @@ int list_sigs(struct onak_dbctx *dbctx,
@@ -55,7 +62,7 @@ index 3ce8735..6377d1b 100644
  int list_uids(struct onak_dbctx *dbctx,
  		uint64_t keyid, struct openpgp_signedpacket_list *uids,
  		bool verbose, bool html)
-@@ -294,6 +322,18 @@ int list_uids(struct onak_dbctx *dbctx,
+@@ -294,14 +322,35 @@ int list_uids(struct onak_dbctx *dbctx,
  					uids->packet->data);
  			}
  		} else if (uids->packet->tag == OPENPGP_PACKET_UAT) {
@@ -66,7 +73,17 @@ index 3ce8735..6377d1b 100644
 +			 * currently asserts about themselves. op=vindex
 +			 * (verbose=true) still shows every UAT, since its
 +			 * purpose is the full key state including history.
++			 *
++			 * imgindx is captured *before* the skip and always
++			 * incremented, because op=photo's getphoto() iterates
++			 * over every UAT in the key (revoked or not) and
++			 * counts them with the same stride. Leaving skipped
++			 * UATs out of the count would desync the HTML idx=N
++			 * we emit from the index getphoto() looks up — making
++			 * the browser fetch the wrong (typically: revoked)
++			 * photo blob for what is shown as the valid UAT.
 +			 */
++			int this_idx = imgindx++;
 +			if (!verbose && signedpacket_is_revoked(uids)) {
 +				uids = uids->next;
 +				continue;
@@ -74,3 +91,12 @@ index 3ce8735..6377d1b 100644
  			printf("                                ");
  			if (html) {
  				printf("<img src=\"lookup?op=photo&search="
+ 					"0x%016" PRIX64 "&idx=%d\" alt=\""
+ 					"[photo id]\">\n",
+ 					keyid,
+-					imgindx);
+-				imgindx++;
++					this_idx);
+ 			} else {
+ 				printf("[photo id]\n");
+ 			}
