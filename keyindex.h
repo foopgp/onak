@@ -40,6 +40,16 @@ int key_index(struct onak_dbctx *dbctx,
 		bool fingerprint, bool skshash, bool html);
 
 /**
+ *	key_index_legacy - Original printf-based renderer for key_index().
+ *	Kept as a fallback when no template is available so that the CGI
+ *	stays functional on a fresh install before /usr/share/onak/templates
+ *	is populated. Same arguments as key_index().
+ */
+int key_index_legacy(struct onak_dbctx *dbctx,
+		struct openpgp_publickey *keys, bool verbose,
+		bool fingerprint, bool skshash, bool html);
+
+/**
  *	mrkey_index - List a set of OpenPGP keys in the MRHKP format.
  *	@keys: The keys to display.
  *

@@ -17,6 +17,7 @@
  */
 
 #include <inttypes.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,7 @@
 #include "log.h"
 #include "onak.h"
 #include "openpgp.h"
+#include "template.h"
 
 /*
  * Convert a Public Key algorithm to its single character representation.
@@ -421,6 +423,296 @@ void display_skshash(struct openpgp_publickey *key, bool html)
 	return;
 }
 
+/*
+ * Helpers for the template-based renderer.
+ */
+
+static char *strdup_printf(const char *fmt, ...)
+		__attribute__((format(printf, 1, 2)));
+static char *strdup_printf(const char *fmt, ...)
+{
+	char buf[128];
+	va_list ap;
+	int n;
+	va_start(ap, fmt);
+	n = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	if (n < 0) {
+		return NULL;
+	}
+	if ((size_t) n < sizeof(buf)) {
+		return strdup(buf);
+	}
+	char *big = malloc((size_t) n + 1);
+	if (big == NULL) {
+		return NULL;
+	}
+	va_start(ap, fmt);
+	vsnprintf(big, (size_t) n + 1, fmt, ap);
+	va_end(ap);
+	return big;
+}
+
+static char *format_fp_string(const struct openpgp_fingerprint *fp)
+{
+	/* Mirror display_fingerprint(): leading space then groups,
+	 * with a double space in the middle for SHA-1. */
+	size_t cap = (size_t) fp->length * 3 + 4;
+	char *buf = malloc(cap);
+	size_t pos = 0;
+	int i;
+	if (buf == NULL) {
+		return NULL;
+	}
+	for (i = 0; i < fp->length; i++) {
+		if (fp->length == 16 || (i % 2 == 0)) {
+			buf[pos++] = ' ';
+		}
+		if (fp->length == 20 && (i * 2) == fp->length) {
+			buf[pos++] = ' ';
+		}
+		pos += snprintf(buf + pos, cap - pos, "%02X", fp->fp[i]);
+	}
+	buf[pos] = '\0';
+	return buf;
+}
+
+static struct tmpl_value *build_sigs_list(struct onak_dbctx *dbctx,
+		struct openpgp_packet_list *sigs)
+{
+	struct tmpl_value *out = tmpl_list();
+	struct tmpl_value *sig;
+	char *resolved;
+	uint64_t sigid;
+	bool is_rev;
+
+	while (sigs != NULL) {
+		sigid = sig_keyid(sigs->packet);
+		is_rev = (sigs->packet->data[0] == 4 &&
+				sigs->packet->data[1] == 0x30);
+		resolved = NULL;
+		if (dbctx != NULL) {
+			resolved = dbctx->keyid2uid(dbctx, sigid);
+		}
+		sig = tmpl_map();
+		tmpl_map_set(sig, "kind",
+			tmpl_string(is_rev ? "rev" : "sig"));
+		tmpl_map_set(sig, "keyid_hex16",
+			tmpl_string_take(
+				strdup_printf("%016" PRIX64, sigid)));
+		tmpl_map_set(sig, "signer_uid_known",
+			tmpl_bool(resolved != NULL));
+		if (resolved != NULL) {
+			tmpl_map_set(sig, "signer_uid",
+				tmpl_string_take(resolved));
+		}
+		tmpl_list_append(out, sig);
+		sigs = sigs->next;
+	}
+	return out;
+}
+
+static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
+		struct openpgp_signedpacket_list *uids, bool verbose)
+{
+	struct tmpl_value *out = tmpl_list();
+	struct tmpl_value *entry;
+	int imgindx = 0;
+
+	while (uids != NULL) {
+		entry = tmpl_map();
+		if (uids->packet->tag == OPENPGP_PACKET_UID) {
+			tmpl_map_set(entry, "is_uat", tmpl_bool(false));
+			tmpl_map_set(entry, "text",
+				tmpl_string_n(
+					(char *) uids->packet->data,
+					uids->packet->length));
+		} else if (uids->packet->tag == OPENPGP_PACKET_UAT) {
+			tmpl_map_set(entry, "is_uat", tmpl_bool(true));
+			tmpl_map_set(entry, "uat_index", tmpl_int(imgindx++));
+		} else {
+			tmpl_free(entry);
+			uids = uids->next;
+			continue;
+		}
+		if (verbose) {
+			tmpl_map_set(entry, "sigs",
+				build_sigs_list(dbctx, uids->sigs));
+		}
+		tmpl_list_append(out, entry);
+		uids = uids->next;
+	}
+	return out;
+}
+
+static struct tmpl_value *build_subkey_list(struct onak_dbctx *dbctx,
+		struct openpgp_signedpacket_list *subkeys, bool verbose)
+{
+	struct tmpl_value *out = tmpl_list();
+	struct tmpl_value *entry;
+	struct tm created;
+	time_t created_time;
+	int type;
+	int length;
+	uint64_t subkeyid = 0;
+
+	while (subkeys != NULL) {
+		if (subkeys->packet->tag != OPENPGP_PACKET_PUBLICSUBKEY) {
+			subkeys = subkeys->next;
+			continue;
+		}
+		created_time = ((time_t) subkeys->packet->data[1] << 24) +
+				((time_t) subkeys->packet->data[2] << 16) +
+				((time_t) subkeys->packet->data[3] << 8) +
+				subkeys->packet->data[4];
+		gmtime_r(&created_time, &created);
+		type = 0;
+		if (subkeys->packet->data[0] == 2 ||
+				subkeys->packet->data[0] == 3) {
+			type = subkeys->packet->data[7];
+		} else if (subkeys->packet->data[0] == 4 ||
+				subkeys->packet->data[0] == 5) {
+			type = subkeys->packet->data[5];
+		}
+		length = keylength(subkeys->packet);
+		(void) get_packetid(subkeys->packet, &subkeyid);
+
+		entry = tmpl_map();
+		tmpl_map_set(entry, "bits_padded",
+			tmpl_string_take(
+				strdup_printf("%5d", length)));
+		tmpl_map_set(entry, "algo_char",
+			tmpl_string_take(
+				strdup_printf("%c", pkalgo2char(type))));
+		tmpl_map_set(entry, "subkeyid_hex16",
+			tmpl_string_take(
+				strdup_printf("%016" PRIX64, subkeyid)));
+		tmpl_map_set(entry, "date_str",
+			tmpl_string_take(
+				strdup_printf("%04d/%02d/%02d",
+					created.tm_year + 1900,
+					created.tm_mon + 1,
+					created.tm_mday)));
+		if (verbose) {
+			tmpl_map_set(entry, "sigs",
+				build_sigs_list(dbctx, subkeys->sigs));
+		}
+		tmpl_list_append(out, entry);
+		subkeys = subkeys->next;
+	}
+	return out;
+}
+
+static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
+		struct openpgp_publickey *key, bool verbose, bool fingerprint,
+		bool skshash)
+{
+	struct tmpl_value *m = tmpl_map();
+	struct openpgp_signedpacket_list *curuid;
+	struct openpgp_fingerprint fp;
+	struct skshash hash;
+	struct tm created;
+	time_t created_time;
+	uint64_t keyid = 0;
+	int type = 0;
+	int length;
+	char buf[64];
+	int i;
+
+	created_time = ((time_t) key->publickey->data[1] << 24) +
+			((time_t) key->publickey->data[2] << 16) +
+			((time_t) key->publickey->data[3] << 8) +
+			key->publickey->data[4];
+	gmtime_r(&created_time, &created);
+	if (key->publickey->data[0] == 2 || key->publickey->data[0] == 3) {
+		type = key->publickey->data[7];
+	} else if (key->publickey->data[0] == 4 ||
+			key->publickey->data[0] == 5) {
+		type = key->publickey->data[5];
+	}
+	length = keylength(key->publickey);
+	(void) get_keyid(key, &keyid);
+
+	tmpl_map_set(m, "bits_padded",
+		tmpl_string_take(strdup_printf("%5d", length)));
+	tmpl_map_set(m, "algo_char",
+		tmpl_string_take(strdup_printf("%c", pkalgo2char(type))));
+	tmpl_map_set(m, "keyid_hex16",
+		tmpl_string_take(
+			strdup_printf("%016" PRIX64, keyid)));
+	tmpl_map_set(m, "date_str",
+		tmpl_string_take(
+			strdup_printf("%04d/%02d/%02d",
+				created.tm_year + 1900,
+				created.tm_mon + 1,
+				created.tm_mday)));
+	tmpl_map_set(m, "revoked", tmpl_bool(key->revoked));
+
+	curuid = key->uids;
+	if (curuid != NULL && curuid->packet->tag == OPENPGP_PACKET_UID) {
+		tmpl_map_set(m, "has_primary_uid", tmpl_bool(true));
+		tmpl_map_set(m, "primary_uid",
+			tmpl_string_n(
+				(char *) curuid->packet->data,
+				curuid->packet->length));
+		if (verbose) {
+			tmpl_map_set(m, "primary_sigs",
+				build_sigs_list(dbctx, curuid->sigs));
+		}
+		curuid = curuid->next;
+	} else {
+		tmpl_map_set(m, "has_primary_uid", tmpl_bool(false));
+	}
+
+	tmpl_map_set(m, "other_uids",
+		build_uid_list(dbctx, curuid, verbose));
+
+	if (verbose) {
+		tmpl_map_set(m, "subkeys",
+			build_subkey_list(dbctx, key->subkeys, verbose));
+	}
+
+	if (fingerprint) {
+		if (get_fingerprint(key->publickey, &fp) == ONAK_E_OK) {
+			tmpl_map_set(m, "fingerprint_formatted",
+				tmpl_string_take(format_fp_string(&fp)));
+		}
+	}
+	if (skshash) {
+		(void) get_skshash(key, &hash);
+		for (i = 0; i < (int) sizeof(hash.hash); i++) {
+			snprintf(buf + i * 2, sizeof(buf) - i * 2,
+				"%02X", hash.hash[i]);
+		}
+		tmpl_map_set(m, "skshash_hex", tmpl_string(buf));
+	}
+
+	return m;
+}
+
+static struct tmpl_value *build_key_index_data(struct onak_dbctx *dbctx,
+		struct openpgp_publickey *keys, bool verbose, bool fingerprint,
+		bool skshash)
+{
+	struct tmpl_value *root = tmpl_map();
+	struct tmpl_value *opts = tmpl_map();
+	struct tmpl_value *klist = tmpl_list();
+
+	tmpl_map_set(opts, "verbose", tmpl_bool(verbose));
+	tmpl_map_set(opts, "fingerprint", tmpl_bool(fingerprint));
+	tmpl_map_set(opts, "skshash", tmpl_bool(skshash));
+	tmpl_map_set(root, "opts", opts);
+
+	while (keys != NULL) {
+		tmpl_list_append(klist,
+			build_one_key(dbctx, keys, verbose,
+				fingerprint, skshash));
+		keys = keys->next;
+	}
+	tmpl_map_set(root, "keys", klist);
+	return root;
+}
+
 /**
  *	key_index - List a set of OpenPGP keys.
  *	@keys: The keys to display.
@@ -432,6 +724,36 @@ void display_skshash(struct openpgp_publickey *key, bool html)
  *	of them. Useful for debugging or the keyserver Index function.
  */
 int key_index(struct onak_dbctx *dbctx,
+		struct openpgp_publickey *keys, bool verbose, bool fingerprint,
+			bool skshash, bool html)
+{
+	const char *template_name = html
+		? "vanilla/key_index.html"
+		: "vanilla/key_index.txt";
+	char *source;
+	struct tmpl_value *root;
+	int rc;
+
+	source = tmpl_load_named(template_name);
+	if (source != NULL) {
+		root = build_key_index_data(dbctx, keys, verbose,
+			fingerprint, skshash);
+		rc = tmpl_render(source, root, tmpl_putc_stdout, NULL);
+		tmpl_free(root);
+		free(source);
+		if (rc == 0) {
+			return 0;
+		}
+		logthing(LOGTHING_ERROR,
+			"template render failed, falling back");
+	}
+
+	/* Fallback to the original printf-based renderer. */
+	return key_index_legacy(dbctx, keys, verbose, fingerprint,
+			skshash, html);
+}
+
+int key_index_legacy(struct onak_dbctx *dbctx,
 		struct openpgp_publickey *keys, bool verbose, bool fingerprint,
 			bool skshash, bool html)
 {
