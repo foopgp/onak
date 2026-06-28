@@ -101,6 +101,10 @@ struct onak_config {
 	/** Maximum number of signatures kept on any UAT. 0 disables the cap. */
 	int max_sigs_per_uat;
 
+	/** Directory holding the HTML/text templates used by the CGI
+	 * lookup pages. NULL means use the compile-time default. */
+	char *template_dir;
+
 	/*
 	 * Options used by the email handling script.
 	 * None of the C code uses this information, but we should be able

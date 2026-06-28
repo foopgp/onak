@@ -64,7 +64,7 @@ endif()
 add_library(libonak STATIC aged.c armor.c charfuncs.c cleankey.c cleanup.c
 	decodekey.c hash.c hash-helper.c key-store.c keyarray.c keyid.c
 	keyindex.c ll.c log.c marshal.c mem.c merge.c onak-conf.c parsekey.c
-	photoid.c rsa.c sigcheck.c sendsync.c sha1x.c wordlist.c)
+	photoid.c rsa.c sigcheck.c sendsync.c sha1x.c template.c wordlist.c)
 set(LIBONAK_LIBRARIES "")
 
 # Ideally use Nettle, fall back to our own md5/sha1 routines otherwise
@@ -112,6 +112,9 @@ configure_file("${CMAKE_SOURCE_DIR}/onak.ini.in"
 install(FILES ${CMAKE_BINARY_DIR}/onak.ini
 	DESTINATION ${CMAKE_INSTALL_SYSCONFDIR})
 
+install(DIRECTORY templates/
+	DESTINATION ${CMAKE_INSTALL_DATADIR}/onak/templates)
+
 configure_file("${CMAKE_SOURCE_DIR}/onak-mail.pl.in"
 	"${CMAKE_BINARY_DIR}/onak-mail.pl" @ONLY)
 install(PROGRAMS ${CMAKE_BINARY_DIR}/onak-mail.pl
@@ -142,6 +145,7 @@ endif()
 # For onak-conf.o compilation
 target_compile_definitions(libonak PRIVATE
 	CONFIGDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}"
+	TEMPLATEDIR="${CMAKE_INSTALL_FULL_DATADIR}/onak/templates"
 	DBINIT=keydb_${DBTYPE}_init)
 
 # DB Backend related options are known, so finish off libonak configuration
@@ -174,6 +178,10 @@ target_link_libraries(stripkey libonak)
 # Testing binary e.g. for AFL++/valgrind
 add_executable(onak-test onak-test.c)
 target_link_libraries(onak-test libonak)
+
+# Standalone exerciser for the template engine
+add_executable(tmpl-render tmpl-render.c)
+target_link_libraries(tmpl-render libonak)
 
 install(TARGETS onak splitkeys RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES onak.1 splitkeys.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1/)
