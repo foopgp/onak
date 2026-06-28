@@ -373,16 +373,20 @@ int cleankeys(struct onak_dbctx *dbctx, struct openpgp_publickey **keys,
 
 	curkey = keys;
 	while (*curkey != NULL) {
-		if (policies & ONAK_CLEAN_DROP_V3_KEYS) {
-			if ((*curkey)->publickey->data[0] < 4) {
-				/* Remove the key from the list if it's < v4 */
-				tmp = *curkey;
-				*curkey = tmp->next;
-				tmp->next = NULL;
-				free_publickey(tmp);
-				changed++;
-				continue;
-			}
+		/*
+		 * v3 (and older) keys are MD5/SHA-1 with deprecated
+		 * algorithms; the SHA-1 collision attacks demonstrated
+		 * since 2017 make them unsafe to keep certifying. No
+		 * modern client emits them either. Drop them unconditionally
+		 * before any further work.
+		 */
+		if ((*curkey)->publickey->data[0] < 4) {
+			tmp = *curkey;
+			*curkey = tmp->next;
+			tmp->next = NULL;
+			free_publickey(tmp);
+			changed++;
+			continue;
 		}
 		if (policies & ONAK_CLEAN_LARGE_PACKETS) {
 			count += clean_large_packets(*curkey);
