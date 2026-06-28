@@ -1,0 +1,17 @@
+{{!
+ Vanilla HTML template for the CGI op=index / op=vindex response.
+ Mirrors keyindex.c::key_index_legacy() byte-for-byte. Edit with care:
+ t/all-100-template-engine.t expects this layout.
+}}<pre>
+Type   bits/keyID    Date       User ID
+{{#keys}}pub  {{bits_padded}}{{algo_char}}/<a href="lookup?op=get&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a> {{date_str}} {{#has_primary_uid}}<a href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{primary_uid}}</a>{{#revoked}} *** REVOKED ***{{/revoked}}
+{{#opts.skshash}}      Key hash = <a href="lookup?op=hget&search={{skshash_hex}}">{{skshash_hex}}</a>
+{{/opts.skshash}}{{#opts.fingerprint}}      Key fingerprint ={{fingerprint_formatted}}
+{{/opts.fingerprint}}{{#opts.verbose}}{{#primary_sigs}}{{kind}}         {{#signer_uid_known}}<a href="lookup?op=get&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>             <a href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{signer_uid}}</a>{{/signer_uid_known}}{{^signer_uid_known}}0x{{keyid_hex16}}             [User id not found]{{/signer_uid_known}}
+{{/primary_sigs}}{{/opts.verbose}}{{/has_primary_uid}}{{^has_primary_uid}}{{#revoked}}*** REVOKED ***{{/revoked}}
+{{#opts.fingerprint}}      Key fingerprint ={{fingerprint_formatted}}
+{{/opts.fingerprint}}{{/has_primary_uid}}{{#other_uids}}                                {{#is_uat}}<img src="lookup?op=photo&search=0x{{keyid_hex16}}&idx={{uat_index}}" alt="[photo id]">{{/is_uat}}{{^is_uat}}{{text}}{{/is_uat}}
+{{#opts.verbose}}{{#sigs}}{{kind}}         {{#signer_uid_known}}<a href="lookup?op=get&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>             <a href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{signer_uid}}</a>{{/signer_uid_known}}{{^signer_uid_known}}0x{{keyid_hex16}}             [User id not found]{{/signer_uid_known}}
+{{/sigs}}{{/opts.verbose}}{{/other_uids}}{{#opts.verbose}}{{#subkeys}}sub  {{bits_padded}}{{algo_char}}/0x{{subkeyid_hex16}} {{date_str}}
+{{#sigs}}{{kind}}         {{#signer_uid_known}}<a href="lookup?op=get&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>             <a href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{signer_uid}}</a>{{/signer_uid_known}}{{^signer_uid_known}}0x{{keyid_hex16}}             [User id not found]{{/signer_uid_known}}
+{{/sigs}}{{/subkeys}}{{/opts.verbose}}{{/keys}}</pre>
