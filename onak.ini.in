@@ -29,6 +29,13 @@ max_reply_keys=128
 ; older entries already known to this server.
 cap_uids_per_key=true
 cap_uats_per_key=true
+; Cap the number of signatures kept on each UID and each User Attribute
+; packet. When a key arrives with more, the surplus is dropped from the
+; tail of the sig list (merge.c appends at the tail, so on a flood the
+; surviving signatures are the older entries already known to this
+; server). Set either value to 0 to disable that cap.
+max_sigs_per_uid=512
+max_sigs_per_uat=512
 ; Verify signature hashes - verify that the hash a signature claims to be
 ; over matches the hash of the data. Does not actually verify the signature.
 check_sighash=true

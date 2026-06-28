@@ -27,6 +27,7 @@
 #include "log.h"
 #include "mem.h"
 #include "merge.h"
+#include "onak-conf.h"
 #include "openpgp.h"
 #include "sigcheck.h"
 
@@ -407,6 +408,68 @@ int clean_large_packets(struct openpgp_publickey *key)
 	return dropped;
 }
 
+/*
+ * Cap the number of signatures attached to each UID/UAT-tagged packet.
+ * Drops the tail of the sig list once @max have been kept; merge.c
+ * appends incoming sigs at the tail, so on a subsequent flood the
+ * surviving signatures are the older entries already known to this
+ * server. On a first import the list order is dictated by the
+ * submitting client, but the cap still bounds the damage.
+ *
+ * Pass @max == 0 to leave the packet untouched. Walks both UIDs and
+ * UATs; pass OPENPGP_PACKET_UID or OPENPGP_PACKET_UAT in @tag to
+ * restrict the action to one kind.
+ */
+static int cap_sigs_per_packet(struct openpgp_publickey *key,
+		int tag, unsigned int max)
+{
+	struct openpgp_signedpacket_list *curuid;
+	struct openpgp_packet_list *sig, *tail, *next;
+	unsigned int kept;
+	int dropped = 0;
+
+	if (max == 0) {
+		return 0;
+	}
+	log_assert(key != NULL);
+	for (curuid = key->uids; curuid != NULL; curuid = curuid->next) {
+		if (curuid->packet->tag != tag) {
+			continue;
+		}
+		kept = 0;
+		sig = curuid->sigs;
+		tail = NULL;
+		while (sig != NULL && kept < max) {
+			tail = sig;
+			sig = sig->next;
+			kept++;
+		}
+		if (sig == NULL) {
+			continue;
+		}
+		/* Detach the surviving prefix from the to-drop tail. */
+		if (tail != NULL) {
+			tail->next = NULL;
+		}
+		curuid->last_sig = tail;
+		while (sig != NULL) {
+			next = sig->next;
+			sig->next = NULL;
+			free_packet_list(sig);
+			sig = next;
+			dropped++;
+		}
+	}
+
+	if (dropped > 0) {
+		logthing(LOGTHING_INFO,
+			"Capped sigs on type-%d packets to %u (dropped %d).",
+			tag, max, dropped);
+	}
+
+	return dropped;
+}
+
 /**
  *	cleankeys - Apply all available cleaning options on a list of keys.
  *	@policies: The cleaning policies to apply.
@@ -478,6 +541,23 @@ int cleankeys(struct onak_dbctx *dbctx, struct openpgp_publickey **keys,
 				count += dedupe_sigs(&sp->sigs,
 						&sp->last_sig);
 			}
+		}
+		/*
+		 * The per-signer dedupe just ran, so the caps below apply
+		 * after the surviving signatures have been reduced to a
+		 * single representative per (version, sigtype, issuer).
+		 * Reading: max_sigs_per_uid is effectively
+		 * "max distinct issuers per UID".
+		 */
+		if (config.max_sigs_per_uid > 0) {
+			count += cap_sigs_per_packet(*curkey,
+				OPENPGP_PACKET_UID,
+				config.max_sigs_per_uid);
+		}
+		if (config.max_sigs_per_uat > 0) {
+			count += cap_sigs_per_packet(*curkey,
+				OPENPGP_PACKET_UAT,
+				config.max_sigs_per_uat);
 		}
 		if (policies & (ONAK_CLEAN_CHECK_SIGHASH |
 					ONAK_CLEAN_VERIFY_SIGNATURES)) {

@@ -61,6 +61,9 @@ struct onak_config config = {
 	.clean_policies = ONAK_CLEAN_CHECK_SIGHASH |
 			ONAK_CLEAN_CAP_UIDS | ONAK_CLEAN_CAP_UATS,
 
+	.max_sigs_per_uid = 512,
+	.max_sigs_per_uat = 512,
+
 	.bin_dir = NULL,
 	.mail_dir = NULL,
 };
@@ -330,6 +333,10 @@ static bool parseconfigline(char *line)
 				config.clean_policies &=
 					~ONAK_CLEAN_CAP_UATS;
 			}
+		} else if (MATCH("verification", "max_sigs_per_uid")) {
+			config.max_sigs_per_uid = atoi(value);
+		} else if (MATCH("verification", "max_sigs_per_uat")) {
+			config.max_sigs_per_uat = atoi(value);
 		} else if (MATCH("verification", "require_other_sig")) {
 #if HAVE_CRYPTO
 			if (parsebool(value, config.clean_policies &
@@ -554,6 +561,8 @@ void writeconfig(const char *configfile)
 			"cap_uids_per_key");
 	WRITE_BOOL(config.clean_policies & ONAK_CLEAN_CAP_UATS,
 			"cap_uats_per_key");
+	fprintf(conffile, "max_sigs_per_uid=%d\n", config.max_sigs_per_uid);
+	fprintf(conffile, "max_sigs_per_uat=%d\n", config.max_sigs_per_uat);
 	fprintf(conffile, "\n");
 
 	fprintf(conffile, "[mail]\n");

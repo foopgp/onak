@@ -96,6 +96,11 @@ struct onak_config {
 	/** What policies should we use for cleaning keys? */
 	uint64_t clean_policies;
 
+	/** Maximum number of signatures kept on any UID. 0 disables the cap. */
+	int max_sigs_per_uid;
+	/** Maximum number of signatures kept on any UAT. 0 disables the cap. */
+	int max_sigs_per_uat;
+
 	/*
 	 * Options used by the email handling script.
 	 * None of the C code uses this information, but we should be able
