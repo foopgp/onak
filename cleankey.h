@@ -24,7 +24,9 @@
 
 #define ONAK_CLEAN_CHECK_SIGHASH	(1 << 0)
 #define ONAK_CLEAN_LARGE_PACKETS	(1 << 1)
-#define ONAK_CLEAN_DROP_V3_KEYS		(1 << 2)
+/* (1 << 2) used to be ONAK_CLEAN_DROP_V3_KEYS; v3 keys are now
+ * always dropped at import, so the toggle has been retired. The bit
+ * is left reserved to avoid accidental reuse with stale meaning. */
 #define ONAK_CLEAN_UPDATE_ONLY		(1 << 3)
 #define ONAK_CLEAN_VERIFY_SIGNATURES	(1 << 4)
 #define ONAK_CLEAN_NEED_OTHER_SIG	(1 << 5)
