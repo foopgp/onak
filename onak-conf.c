@@ -60,6 +60,8 @@ struct onak_config config = {
 
 	.clean_policies = ONAK_CLEAN_DROP_V3_KEYS | ONAK_CLEAN_CHECK_SIGHASH,
 
+	.template_dir = NULL,
+
 	.bin_dir = NULL,
 	.mail_dir = NULL,
 };
@@ -258,6 +260,8 @@ static bool parseconfigline(char *line)
 			config.db_backend = strdup(value);
 		} else if (MATCH("main", "backends_dir")) {
 			config.backends_dir = strdup(value);
+		} else if (MATCH("main", "template_dir")) {
+			config.template_dir = strdup(value);
 		} else if (MATCH("main", "logfile")) {
 			config.logfile = strdup(value);
 		} else if (MATCH("main", "loglevel")) {
@@ -523,6 +527,7 @@ void writeconfig(const char *configfile)
 	fprintf(conffile, "[main]\n");
 	WRITE_IF_NOT_NULL(config.backend->name, "backend");
 	WRITE_IF_NOT_NULL(config.backends_dir, "backends_dir");
+	WRITE_IF_NOT_NULL(config.template_dir, "template_dir");
 	WRITE_IF_NOT_NULL(config.logfile, "logfile");
 	fprintf(conffile, "loglevel=%d\n", getlogthreshold());
 	WRITE_BOOL(config.use_keyd, "use_keyd");
@@ -630,6 +635,10 @@ void cleanupconfig(void) {
 	if (config.backends_dir != NULL) {
 		free(config.backends_dir);
 		config.backends_dir = NULL;
+	}
+	if (config.template_dir != NULL) {
+		free(config.template_dir);
+		config.template_dir = NULL;
 	}
 	if (config.sock_dir != NULL) {
 		free(config.sock_dir);

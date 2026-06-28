@@ -96,6 +96,10 @@ struct onak_config {
 	/** What policies should we use for cleaning keys? */
 	uint64_t clean_policies;
 
+	/** Directory holding the HTML/text templates used by the CGI
+	 * lookup pages. NULL means use the compile-time default. */
+	char *template_dir;
+
 	/*
 	 * Options used by the email handling script.
 	 * None of the C code uses this information, but we should be able

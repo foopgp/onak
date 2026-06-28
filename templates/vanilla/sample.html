@@ -1,0 +1,6 @@
+{{#opts.html}}<pre>
+{{/opts.html}}Type   bits/keyID    Date       User ID
+{{#keys}}pub  {{bits_padded}}{{algo_char}}/{{#opts.html}}<a href="lookup?op=get&search=0x{{keyid_hex16}}">{{/opts.html}}0x{{keyid_hex16}}{{#opts.html}}</a>{{/opts.html}} {{date_str}} {{#has_primary_uid}}{{#opts.html}}<a href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{/opts.html}}{{primary_uid}}{{#opts.html}}</a>{{/opts.html}}{{/has_primary_uid}}{{#revoked}} *** REVOKED ***{{/revoked}}
+{{#other_uids}}                                {{#opts.html}}<a href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{/opts.html}}{{text}}{{#opts.html}}</a>{{/opts.html}}
+{{/other_uids}}{{/keys}}{{#opts.html}}</pre>
+{{/opts.html}}
