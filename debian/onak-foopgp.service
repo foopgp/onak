@@ -1,7 +1,7 @@
 [Unit]
 Description=Backend caching key daemon for onak OpenPGP keyserver
 Documentation=man:onak-keyd
-Requires=onak.socket
+Requires=onak-foopgp.socket
 
 [Service]
 User=onak

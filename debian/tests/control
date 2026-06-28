@@ -1,2 +1,2 @@
 Tests: smoke-tests
-Depends: onak
+Depends: onak-foopgp

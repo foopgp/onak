@@ -1,7 +1,7 @@
-Source: onak
+Source: onak-foopgp
 Section: net
 Priority: optional
-Maintainer: Jonathan McDowell <noodles@earth.li>
+Maintainer: Jean-Jacques Brucker <jjbrucker@foopgp.org>
 Build-Depends: debhelper-compat (= 13)
 Build-Depends-Arch: cmake,
 	libcurl4-gnutls-dev | libcurl-dev,
@@ -10,18 +10,33 @@ Build-Depends-Arch: cmake,
 	nettle-dev,
 	pkgconf
 Standards-Version: 4.7.2
-Homepage: https://www.earth.li/projectpurple/progs/onak.html
-Vcs-Browser: https://the.earth.li/gitweb/?p=onak.git;a=summary
-Vcs-Git: https://the.earth.li/git/onak.git
+Homepage: https://foopgp.org/
+Vcs-Browser: https://github.com/mneme-2026/onak/tree/mneme/main
+Vcs-Git: https://github.com/mneme-2026/onak.git -b mneme/main
 Rules-Requires-Root: no
 
-Package: onak
+Package: onak-foopgp
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}, adduser
 Recommends: apache2 | httpd
 Suggests: db-util
-Description: OpenPGP Key Server
+Conflicts: onak
+Replaces: onak
+Provides: onak
+Description: OpenPGP Key Server (foopgp fork with extra cleaning policies)
  onak is an OpenPGP compatible keyserver which supports multiple subkeys,
  photo ids and path finding between keys. It can provide an HKP
  compatible interface for use with the --keyserver option of gnupg as
  well as including a command line tool for querying the key database.
+ .
+ This is the foopgp fork: vanilla onak with extra hygiene patches
+ maintained against upstream pull requests:
+ .
+   * cap_uids_per_key / cap_uats_per_key  (PR #6, merged upstream)
+   * onak aged / dump-aged / clean-aged   (PR #7)
+   * dedupe per-signer signatures         (PR #8)
+   * drop v3 keys unconditionally
+   * max_sigs_per_uid / max_sigs_per_uat
+ .
+ Once all five patches land in upstream onak this package goes away
+ and we revert to vanilla onak.

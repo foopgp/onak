@@ -1,3 +1,27 @@
+onak-foopgp (0.6.5+foopgp1) unstable; urgency=low
+
+  * Renamed source and binary package from onak to onak-foopgp; this
+    fork ships ahead of vanilla onak 0.6.5 with five extra patches
+    maintained against upstream pull requests. Once those land
+    upstream this package will be retired in favour of plain onak.
+  * Conflicts/Replaces/Provides onak so an upgrade from the Debian
+    onak package is straightforward.
+  * Maintainer transferred to the fork's owner; Jonathan McDowell
+    remains the upstream author and Debian onak maintainer.
+  * cleankey: cap UIDs and UATs per key at import (PR #6 upstream,
+    merged 2026-06-28).
+  * onak: add aged / dump-aged / clean-aged subcommands (PR #7).
+  * merge, cleankey: collapse signatures per (version, sigtype,
+    issuer) (PR #8).
+  * cleankey: drop v3 keys unconditionally, retire the drop_v3
+    toggle.
+  * cleankey: add max_sigs_per_uid / max_sigs_per_uat caps.
+  * debian/onak.{service,socket,...} renamed to onak-foopgp.{...};
+    administrators must re-enable the unit after upgrade:
+      systemctl enable --now onak-foopgp.socket
+
+ -- Jean-Jacques Brucker <jjbrucker@foopgp.org>  Sun, 28 Jun 2026 16:00:00 +0200
+
 onak (0.6.5-1) unstable; urgency=low
 
   * New upstream release

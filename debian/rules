@@ -10,5 +10,5 @@ override_dh_installinit:
 	dh_installinit --no-start
 
 override_dh_installsystemd:
-	dh_installsystemd --no-enable --no-start onak.service
-	dh_installsystemd --no-enable --no-start onak.socket
+	dh_installsystemd --no-enable --no-start onak-foopgp.service
+	dh_installsystemd --no-enable --no-start onak-foopgp.socket
