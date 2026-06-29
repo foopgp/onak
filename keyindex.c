@@ -828,14 +828,23 @@ int key_index(struct onak_dbctx *dbctx,
 		struct openpgp_publickey *keys, bool verbose, bool fingerprint,
 			bool skshash, bool html)
 {
-	const char *template_name = html
-		? "key_index.html"
-		: "key_index.txt";
 	char *source;
 	struct tmpl_value *root;
 	int rc;
 
-	source = tmpl_load_named(template_name);
+	/*
+	 * The text rendering is the wire format clients like
+	 * gpg --keyserver --search parse, so it has to stay strict.
+	 * Templating that path would let an operator break the format
+	 * by editing a file on disk, so we never touch it: html=false
+	 * goes straight to the legacy printf renderer.
+	 */
+	if (!html) {
+		return key_index_legacy(dbctx, keys, verbose, fingerprint,
+				skshash, html);
+	}
+
+	source = tmpl_load_named("key_index.html");
 	if (source != NULL) {
 		root = build_key_index_data(dbctx, keys, verbose,
 			fingerprint, skshash);
