@@ -7,7 +7,7 @@
 set -e
 
 cd ${WORKDIR}
-OUT=$(${BUILDDIR}/tmpl-render ${TESTSDIR}/../templates/vanilla/sample.html)
+OUT=$(${BUILDDIR}/tmpl-render ${TESTSDIR}/sample-template.html)
 case "$OUT" in
     *"<pre>"*) ;;
     *) echo "* tmpl-render: missing <pre> wrapper"; exit 1 ;;
