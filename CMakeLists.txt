@@ -145,7 +145,7 @@ endif()
 # For onak-conf.o compilation
 target_compile_definitions(libonak PRIVATE
 	CONFIGDIR="${CMAKE_INSTALL_FULL_SYSCONFDIR}"
-	TEMPLATEDIR="${CMAKE_INSTALL_FULL_DATADIR}/onak/templates"
+	TEMPLATEDIR="${CMAKE_INSTALL_FULL_DATADIR}/onak/templates/vanilla"
 	DBINIT=keydb_${DBTYPE}_init)
 
 # DB Backend related options are known, so finish off libonak configuration
