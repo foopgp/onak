@@ -563,6 +563,35 @@ static struct tmpl_value *build_sigs_list(struct onak_dbctx *dbctx,
 	return out;
 }
 
+/*
+ * Extract the email address between '<' and '>' from a UID string of
+ * the conventional shape "Name (comment) <local@domain>". Returns a
+ * heap-allocated string on success, NULL when the UID carries no
+ * email-shaped bracket pair.
+ */
+static char *extract_uid_email(const char *text, size_t len)
+{
+	const char *lt = memchr(text, '<', len);
+	if (lt == NULL) {
+		return NULL;
+	}
+	const char *gt = memchr(lt + 1, '>', len - (lt + 1 - text));
+	if (gt == NULL || gt == lt + 1) {
+		return NULL;
+	}
+	if (memchr(lt + 1, '@', gt - lt - 1) == NULL) {
+		return NULL;
+	}
+	size_t n = gt - lt - 1;
+	char *out = malloc(n + 1);
+	if (out == NULL) {
+		return NULL;
+	}
+	memcpy(out, lt + 1, n);
+	out[n] = '\0';
+	return out;
+}
+
 static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 		struct openpgp_signedpacket_list *uids, bool verbose)
 {
@@ -570,43 +599,63 @@ static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 	struct tmpl_value *entry;
 	int this_idx;
 	int imgindx = 0;
+	bool is_uat;
+	bool revoked;
+	char *email;
 
 	while (uids != NULL) {
+		is_uat = (uids->packet->tag == OPENPGP_PACKET_UAT);
+		if (uids->packet->tag != OPENPGP_PACKET_UID && !is_uat) {
+			uids = uids->next;
+			continue;
+		}
+
+		/*
+		 * imgindx tracks the photo position op=photo /
+		 * getphoto() will index into. It must advance for
+		 * every UAT we see (revoked or not), or the idx
+		 * we emit desyncs from getphoto()'s stride and the
+		 * browser fetches the wrong blob.
+		 */
+		this_idx = is_uat ? imgindx++ : 0;
+
+		revoked = signedpacket_is_revoked(uids);
+		if (!verbose && revoked) {
+			/*
+			 * op=index is the compact public listing; a
+			 * revoked UID or UAT no longer represents what
+			 * its owner asserts about themselves, so we drop
+			 * it. op=vindex (verbose) still passes it through
+			 * with a 'revoked' flag so the foopgp template
+			 * can choose to hide it while the vanilla one
+			 * keeps the full historical view.
+			 */
+			uids = uids->next;
+			continue;
+		}
+
 		entry = tmpl_map();
-		if (uids->packet->tag == OPENPGP_PACKET_UID) {
-			tmpl_map_set(entry, "is_uat", tmpl_bool(false));
+		tmpl_map_set(entry, "is_uat", tmpl_bool(is_uat));
+		tmpl_map_set(entry, "revoked", tmpl_bool(revoked));
+		if (is_uat) {
+			tmpl_map_set(entry, "uat_index", tmpl_int(this_idx));
+		} else {
 			tmpl_map_set(entry, "text",
 				tmpl_string_n(
 					(char *) uids->packet->data,
 					uids->packet->length));
-		} else if (uids->packet->tag == OPENPGP_PACKET_UAT) {
-			/*
-			 * imgindx tracks the photo position op=photo /
-			 * getphoto() will index into. It must advance for
-			 * every UAT we see (revoked or not), or the idx
-			 * we emit desyncs from getphoto()'s stride and the
-			 * browser fetches the wrong blob.
-			 */
-			this_idx = imgindx++;
-			if (!verbose && signedpacket_is_revoked(uids)) {
-				/*
-				 * op=index is the compact public listing;
-				 * a revoked UAT no longer represents what
-				 * its owner asserts about themselves, so we
-				 * drop it. op=vindex (verbose) still shows
-				 * it because that view is the full key
-				 * state with history.
-				 */
-				tmpl_free(entry);
-				uids = uids->next;
-				continue;
+			email = extract_uid_email(
+				(const char *) uids->packet->data,
+				uids->packet->length);
+			if (email != NULL) {
+				tmpl_map_set(entry, "has_email",
+					tmpl_bool(true));
+				tmpl_map_set(entry, "email",
+					tmpl_string_take(email));
+			} else {
+				tmpl_map_set(entry, "has_email",
+					tmpl_bool(false));
 			}
-			tmpl_map_set(entry, "is_uat", tmpl_bool(true));
-			tmpl_map_set(entry, "uat_index", tmpl_int(this_idx));
-		} else {
-			tmpl_free(entry);
-			uids = uids->next;
-			continue;
 		}
 		if (verbose) {
 			tmpl_map_set(entry, "sigs",
@@ -721,13 +770,42 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 				created.tm_mday)));
 	tmpl_map_set(m, "revoked", tmpl_bool(key->revoked));
 
+	/*
+	 * Pick the primary UID that goes in the pub-line slot. Walk
+	 * past any revoked UIDs (and skip UAT packets that may sit in
+	 * the same list) so the pub-line always carries a usable
+	 * identity. In verbose mode we still want every revoked UID to
+	 * reach the template, so the ones we skipped here stay in
+	 * other_uids via build_uid_list(); in non-verbose mode
+	 * build_uid_list() drops them entirely.
+	 */
 	curuid = key->uids;
-	if (curuid != NULL && curuid->packet->tag == OPENPGP_PACKET_UID) {
+	while (curuid != NULL) {
+		if (curuid->packet->tag == OPENPGP_PACKET_UID &&
+				!signedpacket_is_revoked(curuid)) {
+			break;
+		}
+		curuid = curuid->next;
+	}
+	if (curuid != NULL) {
+		char *primary_email;
+
 		tmpl_map_set(m, "has_primary_uid", tmpl_bool(true));
 		tmpl_map_set(m, "primary_uid",
 			tmpl_string_n(
 				(char *) curuid->packet->data,
 				curuid->packet->length));
+		primary_email = extract_uid_email(
+			(const char *) curuid->packet->data,
+			curuid->packet->length);
+		if (primary_email != NULL) {
+			tmpl_map_set(m, "primary_has_email", tmpl_bool(true));
+			tmpl_map_set(m, "primary_email",
+				tmpl_string_take(primary_email));
+		} else {
+			tmpl_map_set(m, "primary_has_email",
+				tmpl_bool(false));
+		}
 		if (verbose) {
 			tmpl_map_set(m, "primary_sigs",
 				build_sigs_list(dbctx, curuid->sigs));
@@ -735,6 +813,7 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 		curuid = curuid->next;
 	} else {
 		tmpl_map_set(m, "has_primary_uid", tmpl_bool(false));
+		curuid = key->uids;
 	}
 
 	tmpl_map_set(m, "other_uids",
@@ -763,8 +842,9 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 	/*
 	 * Extra fields that the vanilla template ignores but the foopgp
 	 * template uses: a trimmed fingerprint suitable for display in a
-	 * <code> block without the legacy leading space, and a count of
-	 * sigs across all UIDs and UATs (excluding subkey binding sigs).
+	 * <code> block without the legacy leading space, a raw-hex
+	 * fingerprint suitable for ?search=0x… URLs, and a count of sigs
+	 * across all UIDs and UATs (excluding subkey binding sigs).
 	 */
 	if (get_fingerprint(key->publickey, &fp) == ONAK_E_OK) {
 		char *full = format_fp_string(&fp);
@@ -774,6 +854,17 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 			tmpl_map_set(m, "fingerprint_formatted_trimmed",
 				tmpl_string(trim));
 			free(full);
+		}
+		size_t hexlen = (size_t) fp.length * 2;
+		char *hex = malloc(hexlen + 1);
+		if (hex != NULL) {
+			for (i = 0; i < fp.length; i++) {
+				snprintf(hex + i * 2, 3, "%02X",
+					fp.fp[i]);
+			}
+			hex[hexlen] = '\0';
+			tmpl_map_set(m, "fingerprint_hex_full",
+				tmpl_string_take(hex));
 		}
 	}
 	{
@@ -1039,22 +1130,37 @@ int mrkey_index(struct openpgp_publickey *keys)
 		for (curuid = keys->uids; curuid != NULL;
 			 curuid = curuid->next) {
 
-			if (curuid->packet->tag == OPENPGP_PACKET_UID) {
-				printf("uid:");
-				for (i = 0; i < (int) curuid->packet->length;
-						i++) {
-					c = curuid->packet->data[i];
-					if (c == '%') {
-						putchar('%');
-						putchar(c);
-					} else if (c == ':' || c > 127) {
-						printf("%%%X", c);
-					} else {
-						putchar(c);
-					}
-				}
-				printf("\n");
+			/*
+			 * MRHKP consumers (gpg --keyserver --search, etc.)
+			 * parse uid: rows as textual identities. UATs carry
+			 * binary images and have nothing to say in this
+			 * format, so skip them. Revoked UIDs are also
+			 * filtered: the spec's optional revocation flag
+			 * trailing the row works in theory, but the
+			 * pragmatic foopgp policy is to hide them outright
+			 * so the search result lists only assertions the
+			 * holder still stands behind.
+			 */
+			if (curuid->packet->tag != OPENPGP_PACKET_UID) {
+				continue;
 			}
+			if (signedpacket_is_revoked(curuid)) {
+				continue;
+			}
+			printf("uid:");
+			for (i = 0; i < (int) curuid->packet->length;
+					i++) {
+				c = curuid->packet->data[i];
+				if (c == '%') {
+					putchar('%');
+					putchar(c);
+				} else if (c == ':' || c > 127) {
+					printf("%%%X", c);
+				} else {
+					putchar(c);
+				}
+			}
+			printf("\n");
 		}
 		keys = keys->next;
 	}
