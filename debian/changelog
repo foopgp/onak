@@ -1,3 +1,17 @@
+onak-foopgp (0.6.5-foopgp2) unstable; urgency=medium
+
+  [ Mnème ]
+  * debian: install template dirs from the source tree, not debian/tmp
+  * keyindex: op=index skips revoked UATs
+  * keyindex: keep imgindx aligned with getphoto when skipping UATs
+  * keyindex: address review feedback on op=index UAT skip
+  * doc: add html_lookup template for the CGI keyserver UI
+  * doc: address review feedback on html_lookup template
+  * keyindex: skip revoked UATs in the templated op=index path too
+  * debian/copyright: attribute doc/html_lookup/* to piseb
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Mon, 29 Jun 2026 18:14:45 +0200
+
 onak-foopgp (0.6.5+foopgp1) unstable; urgency=low
 
   * Renamed source and binary package from onak to onak-foopgp; this
