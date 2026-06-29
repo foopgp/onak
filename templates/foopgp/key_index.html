@@ -1,0 +1,61 @@
+{{!
+ foopgp HTML template for op=index / op=vindex.
+ Renders as a fragment that fits inside the existing CGI <BODY>
+ wrapper from start_html(). Two-column layout per key: UATs left
+ (180x180), UIDs right. KeyIDs link to op=index. Inline JS resolves
+ navigator.language against an EN/FR/DE strings table; falls back
+ to EN if the locale is unknown or JS is disabled.
+}}<style>
+.fp-card { display: flex; flex-wrap: wrap; gap: 1em; border: 1px solid #e3e6ea; border-radius: 8px; padding: 1em; margin: 1em 0; background: #fafbfc; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #333; max-width: 1100px; }
+.fp-uat-col { display: flex; flex-direction: column; gap: .5em; flex: 0 0 180px; }
+.fp-uat-img { display: block; width: 180px; height: 180px; object-fit: cover; object-position: top; border-radius: 4px; background: #eee; border: 1px solid #e3e6ea; }
+.fp-uid-col { flex: 1; min-width: 0; }
+.fp-pub { display: flex; flex-wrap: wrap; align-items: center; gap: .75em; margin-bottom: .5em; }
+.fp-keyid { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-weight: 600; color: #1976D2; text-decoration: none; }
+.fp-keyid:hover { text-decoration: underline; }
+.fp-date { color: #777; font-size: .92em; }
+.fp-download { display: inline-block; padding: .35em .9em; background: #1976D2; color: #fff; border-radius: 4px; text-decoration: none; font-size: .9em; font-weight: 500; }
+.fp-download:hover { filter: brightness(1.1); }
+.fp-revoked { display: inline-block; padding: .25em .6em; background: #b00020; color: #fff; border-radius: 4px; font-size: .85em; font-weight: 600; letter-spacing: .05em; }
+.fp-fp { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; letter-spacing: .03em; margin: .5em 0; padding: .4em .6em; background: #fff; border: 1px solid #e3e6ea; border-radius: 4px; cursor: help; }
+.fp-uids { margin: .5em 0; }
+.fp-uid { display: block; color: #222; text-decoration: none; padding: .35em .4em; border-bottom: 1px dotted #e3e6ea; }
+.fp-uid:hover { background: #f0f6ff; }
+.fp-uid:last-child { border-bottom: none; }
+.fp-counter { display: inline-block; background: #1976D2; color: #fff; padding: .4em .9em; border-radius: 4px; font-weight: 600; }
+.fp-sigs { margin-top: .5em; padding-top: .5em; border-top: 1px solid #e3e6ea; }
+.fp-sig { padding: .25em 0; font-size: .92em; border-bottom: 1px dotted #e3e6ea; }
+.fp-sig:last-child { border-bottom: none; }
+.fp-sig.rev { background: #fff5f5; }
+.fp-sigkid { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; color: #1976D2; text-decoration: none; font-weight: 500; }
+.fp-sigkind { display: inline-block; min-width: 2.5em; color: #777; font-family: ui-monospace, monospace; font-size: .85em; }
+.fp-sig.rev .fp-sigkind { color: #b00020; font-weight: 600; }
+.fp-signer { color: #444; margin-left: .4em; }
+.fp-empty { padding: 1em; color: #777; }
+</style>
+{{^keys}}<p class="fp-empty" data-i18n="no_result">Key not found.</p>{{/keys}}
+{{#keys}}<div class="fp-card">
+  <div class="fp-uat-col">{{#other_uids}}{{#is_uat}}<img class="fp-uat-img" src="lookup?op=photo&search=0x{{keyid_hex16}}&idx={{uat_index}}" alt="" loading="lazy">{{/is_uat}}{{/other_uids}}</div>
+  <div class="fp-uid-col">
+    <div class="fp-pub"><a class="fp-keyid" href="lookup?op=index&search=0x{{keyid_hex16}}" data-i18n-tooltip="keyid_tooltip">0x{{keyid_hex16}}</a><span class="fp-date">{{date_str}}</span>{{#revoked}}<span class="fp-revoked" data-i18n="revoked">REVOKED</span>{{/revoked}}<a class="fp-download" href="lookup?op=get&search=0x{{keyid_hex16}}" data-i18n="download" data-i18n-tooltip="download_tooltip">Download</a></div>
+    <div class="fp-fp" data-i18n-tooltip="fingerprint_tooltip">{{fingerprint_formatted_trimmed}}</div>
+    <div class="fp-uids">{{#has_primary_uid}}<a class="fp-uid" href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{primary_uid}}</a>{{/has_primary_uid}}{{#other_uids}}{{^is_uat}}<a class="fp-uid" href="lookup?op=vindex&search=0x{{keyid_hex16}}">{{text}}</a>{{/is_uat}}{{/other_uids}}</div>
+    {{^opts.verbose}}<div class="fp-counter" data-i18n-tooltip="sig_count_tooltip"><span data-i18n="signatures">Signatures</span>: {{sig_count_total}}</div>{{/opts.verbose}}
+    {{#opts.verbose}}<div class="fp-sigs">{{#primary_sigs}}<div class="fp-sig{{#kind_is_rev}} rev{{/kind_is_rev}}"><span class="fp-sigkind">{{kind}}</span><a class="fp-sigkid" href="lookup?op=index&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>{{#signer_uid_known}}<span class="fp-signer">{{signer_uid}}</span>{{/signer_uid_known}}{{^signer_uid_known}}<span class="fp-signer" data-i18n="user_not_found">[user id not found]</span>{{/signer_uid_known}}</div>{{/primary_sigs}}{{#other_uids}}{{#sigs}}<div class="fp-sig{{#kind_is_rev}} rev{{/kind_is_rev}}"><span class="fp-sigkind">{{kind}}</span><a class="fp-sigkid" href="lookup?op=index&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>{{#signer_uid_known}}<span class="fp-signer">{{signer_uid}}</span>{{/signer_uid_known}}{{^signer_uid_known}}<span class="fp-signer" data-i18n="user_not_found">[user id not found]</span>{{/signer_uid_known}}</div>{{/sigs}}{{/other_uids}}</div>{{/opts.verbose}}
+  </div>
+</div>{{/keys}}
+<script>
+(function () {
+  var STRINGS = {
+    en: { download: "Download", download_tooltip: "Download this OpenPGP certificate", fingerprint_tooltip: "Check that this fingerprint matches the one printed on the holder's card or shown in person", keyid_tooltip: "Click for the public listing of this key", signatures: "Signatures", sig_count_tooltip: "Total certifying signatures across all identities on this key", user_not_found: "[user id not found]", no_result: "Key not found.", revoked: "REVOKED" },
+    fr: { download: "Télécharger", download_tooltip: "Télécharger ce certificat OpenPGP", fingerprint_tooltip: "Vérifiez que cette empreinte correspond à celle imprimée sur la carte ou présentée par le détenteur", keyid_tooltip: "Voir la fiche publique de cette clé", signatures: "Signatures", sig_count_tooltip: "Nombre total de signatures de certification, toutes identités confondues", user_not_found: "[utilisateur inconnu]", no_result: "Clé introuvable.", revoked: "RÉVOQUÉE" },
+    de: { download: "Herunterladen", download_tooltip: "Dieses OpenPGP-Zertifikat herunterladen", fingerprint_tooltip: "Prüfen Sie, ob dieser Fingerabdruck mit dem auf der Karte oder vom Inhaber gezeigten übereinstimmt", keyid_tooltip: "Öffentlichen Eintrag dieses Schlüssels anzeigen", signatures: "Signaturen", sig_count_tooltip: "Gesamtzahl der Zertifizierungssignaturen über alle Identitäten dieses Schlüssels", user_not_found: "[Benutzer unbekannt]", no_result: "Schlüssel nicht gefunden.", revoked: "WIDERRUFEN" }
+  };
+  var lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+  var dict = STRINGS[lang] || STRINGS.en;
+  var nodes = document.querySelectorAll("[data-i18n]");
+  for (var i = 0; i < nodes.length; i++) { var k = nodes[i].getAttribute("data-i18n"); if (dict[k]) nodes[i].textContent = dict[k]; }
+  nodes = document.querySelectorAll("[data-i18n-tooltip]");
+  for (var j = 0; j < nodes.length; j++) { var t = nodes[j].getAttribute("data-i18n-tooltip"); if (dict[t]) nodes[j].setAttribute("title", dict[t]); }
+})();
+</script>

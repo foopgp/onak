@@ -497,6 +497,7 @@ static struct tmpl_value *build_sigs_list(struct onak_dbctx *dbctx,
 		sig = tmpl_map();
 		tmpl_map_set(sig, "kind",
 			tmpl_string(is_rev ? "rev" : "sig"));
+		tmpl_map_set(sig, "kind_is_rev", tmpl_bool(is_rev));
 		tmpl_map_set(sig, "keyid_hex16",
 			tmpl_string_take(
 				strdup_printf("%016" PRIX64, sigid)));
@@ -687,6 +688,34 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 		tmpl_map_set(m, "skshash_hex", tmpl_string(buf));
 	}
 
+	/*
+	 * Extra fields that the vanilla template ignores but the foopgp
+	 * template uses: a trimmed fingerprint suitable for display in a
+	 * <code> block without the legacy leading space, and a count of
+	 * sigs across all UIDs and UATs (excluding subkey binding sigs).
+	 */
+	if (get_fingerprint(key->publickey, &fp) == ONAK_E_OK) {
+		char *full = format_fp_string(&fp);
+		if (full != NULL) {
+			char *trim = full;
+			while (*trim == ' ') trim++;
+			tmpl_map_set(m, "fingerprint_formatted_trimmed",
+				tmpl_string(trim));
+			free(full);
+		}
+	}
+	{
+		long long total = 0;
+		struct openpgp_signedpacket_list *p;
+		struct openpgp_packet_list *s;
+		for (p = key->uids; p != NULL; p = p->next) {
+			for (s = p->sigs; s != NULL; s = s->next) {
+				total++;
+			}
+		}
+		tmpl_map_set(m, "sig_count_total", tmpl_int(total));
+	}
+
 	return m;
 }
 
@@ -728,8 +757,8 @@ int key_index(struct onak_dbctx *dbctx,
 			bool skshash, bool html)
 {
 	const char *template_name = html
-		? "vanilla/key_index.html"
-		: "vanilla/key_index.txt";
+		? "key_index.html"
+		: "key_index.txt";
 	char *source;
 	struct tmpl_value *root;
 	int rc;
