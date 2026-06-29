@@ -2,4 +2,4 @@ obj-*/onak.ini                                       etc
 obj-*/cgi/add obj-*/cgi/lookup obj-*/cgi/gpgwww obj-*/cgi/hashquery  usr/lib/cgi-bin/pks
 templates/vanilla                                    usr/share/onak/templates
 templates/foopgp                                     usr/share/onak/templates
-doc/html_lookup                                      usr/share/doc/onak/examples
+doc/html_lookup/index.html                           var/www/onak
