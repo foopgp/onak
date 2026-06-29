@@ -1,3 +1,15 @@
+onak-foopgp (0.6.5.foopgp3-1) unstable; urgency=medium
+
+  [ jjbrucker ]
+  * html_lookup: milligram.css → milligram.min.css
+
+  [ Mnème ]
+  * debian: install the html_lookup landing page + suggest its CSS deps
+  * keyindex: text mode is the wire format, never templated
+  * templates: move the engine smoke fixture out of the install path
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Mon, 29 Jun 2026 21:09:06 +0200
+
 onak-foopgp (0.6.5-foopgp2) unstable; urgency=medium
 
   [ Mnème ]
