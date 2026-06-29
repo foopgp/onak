@@ -568,6 +568,7 @@ static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 {
 	struct tmpl_value *out = tmpl_list();
 	struct tmpl_value *entry;
+	int this_idx;
 	int imgindx = 0;
 
 	while (uids != NULL) {
@@ -579,8 +580,29 @@ static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 					(char *) uids->packet->data,
 					uids->packet->length));
 		} else if (uids->packet->tag == OPENPGP_PACKET_UAT) {
+			/*
+			 * imgindx tracks the photo position op=photo /
+			 * getphoto() will index into. It must advance for
+			 * every UAT we see (revoked or not), or the idx
+			 * we emit desyncs from getphoto()'s stride and the
+			 * browser fetches the wrong blob.
+			 */
+			this_idx = imgindx++;
+			if (!verbose && signedpacket_is_revoked(uids)) {
+				/*
+				 * op=index is the compact public listing;
+				 * a revoked UAT no longer represents what
+				 * its owner asserts about themselves, so we
+				 * drop it. op=vindex (verbose) still shows
+				 * it because that view is the full key
+				 * state with history.
+				 */
+				tmpl_free(entry);
+				uids = uids->next;
+				continue;
+			}
 			tmpl_map_set(entry, "is_uat", tmpl_bool(true));
-			tmpl_map_set(entry, "uat_index", tmpl_int(imgindx++));
+			tmpl_map_set(entry, "uat_index", tmpl_int(this_idx));
 		} else {
 			tmpl_free(entry);
 			uids = uids->next;
