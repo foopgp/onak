@@ -19,7 +19,9 @@ Package: onak-foopgp
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}, adduser
 Recommends: apache2 | httpd
-Suggests: db-util
+Suggests: db-util,
+ javascript-common,
+ libjs-milligram
 Conflicts: onak
 Replaces: onak
 Provides: onak
