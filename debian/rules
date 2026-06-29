@@ -12,3 +12,11 @@ override_dh_installinit:
 override_dh_installsystemd:
 	dh_installsystemd --no-enable --no-start onak-foopgp.service
 	dh_installsystemd --no-enable --no-start onak-foopgp.socket
+
+# Point onak.ini at the foopgp template flavour. CMake ships vanilla
+# as the compile-time default; foopgp overrides explicitly so this
+# package serves the 2-column HTML layout out of the box.
+override_dh_install:
+	dh_install
+	sed -i '/^\[main\]/a template_dir=/usr/share/onak/templates/foopgp' \
+		debian/onak-foopgp/etc/onak.ini

@@ -34,6 +34,9 @@ Description: OpenPGP Key Server (foopgp fork with extra cleaning policies)
  .
    * cap_uids_per_key / cap_uats_per_key  (PR #6, merged upstream)
    * onak aged / dump-aged / clean-aged   (PR #7)
+   * a minimal Mustache template engine wiring the CGI lookup
+     pages to /usr/share/onak/templates/{vanilla,foopgp}/, plus
+     the 2-column foopgp HTML layout served by default
    * dedupe per-signer signatures         (PR #8)
    * drop v3 keys unconditionally
    * max_sigs_per_uid / max_sigs_per_uat

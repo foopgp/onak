@@ -16,11 +16,22 @@ onak-foopgp (0.6.5+foopgp1) unstable; urgency=low
   * cleankey: drop v3 keys unconditionally, retire the drop_v3
     toggle.
   * cleankey: add max_sigs_per_uid / max_sigs_per_uat caps.
+  * template: introduce a minimal Mustache-style HTML/text engine
+    that lets the CGI lookup pages be rendered from a template
+    directory under /usr/share/onak/templates/ rather than from
+    printf calls inside keyindex.c; adds a new template_dir
+    setting in onak.ini.
+  * keyindex: render op=index / op=vindex through templates. The
+    vanilla template reproduces the legacy output byte-for-byte.
+  * templates: ship the foopgp 2-column layout with client-side
+    i18n. The onak-foopgp package wires template_dir at install
+    time to /usr/share/onak/templates/foopgp so a fresh install
+    serves the new identity-first rendering immediately.
   * debian/onak.{service,socket,...} renamed to onak-foopgp.{...};
     administrators must re-enable the unit after upgrade:
       systemctl enable --now onak-foopgp.socket
 
- -- Jean-Jacques Brucker <jjbrucker@foopgp.org>  Sun, 28 Jun 2026 16:00:00 +0200
+ -- Jean-Jacques Brucker <jjbrucker@foopgp.org>  Mon, 29 Jun 2026 11:00:00 +0200
 
 onak (0.6.5-1) unstable; urgency=low
 

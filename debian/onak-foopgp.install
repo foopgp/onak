@@ -1,2 +1,4 @@
 obj-*/onak.ini                                       etc
 obj-*/cgi/add obj-*/cgi/lookup obj-*/cgi/gpgwww obj-*/cgi/hashquery  usr/lib/cgi-bin/pks
+usr/share/onak/templates/vanilla
+usr/share/onak/templates/foopgp
