@@ -11,15 +11,15 @@
   #keytext      { min-height: 12rem; }
   .display-block{ display: block; }
 </style>
-<title>Public Key Server Commands</title>
+<title>Public Key Server</title>
 </head>
 
 <body>
 <div class="container">
 
-  <h1><a href="https://github.com/u1f35c/onak">Onak</a> Public Key Server</h1>
+  <h1><a href="https://github.com/foopgp/onak">Onak-foopgp</a> Public Key Server</h1>
 
-  <h2>Search PGP keys</h2>
+  <h2>Search PGP certificates</h2>
 
   <form action="/pks/lookup" method="GET">
     <label for="index">Index:</label>
@@ -41,7 +41,7 @@
     <input class="button-primary" type="submit" value="Search">
   </form>
 
-  <h2>Add a new key to the server</h2>
+  <h2>Add a new PGP certificate to the server</h2>
 
     <p><code>$ gpg --armor --export &lt;email&gt;</code></p>
 
@@ -55,10 +55,6 @@
       <input class="button-clear" type="reset" value="Reset">
       <input class="button-primary" type="submit" value="Send">
     </form>
-
-  <h2>Contact</h2>
-
-  <a href="mailto:your@mail">your@mail</a>
 
 </div>
 </body>
