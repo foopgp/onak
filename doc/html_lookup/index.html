@@ -8,12 +8,31 @@
      The /javascript/ alias is provided by the javascript-common package. -->
 <link rel="stylesheet" href="/javascript/milligram/milligram.min.css">
 <style>
+  /* Milligram's default body font is 1.6em (16px on top of html 62.5%),
+     h1 4.0rem and h2 3.6rem; the cap on .container is 112rem. That
+     reads "fat" on a modern monitor and leaves a big white moat in
+     landscape — pull everything in. The media queries then re-tune
+     for narrow portrait phones (more breathing room, slightly bigger
+     touch targets) and for very wide screens (less wasted moat). */
+  body          { font-size: 1.5em; line-height: 1.5; }
+  h1            { font-size: 2.6rem; margin-bottom: 1rem; }
+  h2            { font-size: 1.9rem; margin-top: 2rem; margin-bottom: .8rem; }
   form label    { display: inline-block; }
-  .container    { max-width: 60rem; }
-  #keytext      { min-height: 12rem; }
+  form          { margin-bottom: 1.5rem; }
+  .container    { max-width: 90rem; padding: 0 2rem; }
+  #keytext      { min-height: 10rem; }
   .display-block{ display: block; }
   .lang-bar     { display: flex; justify-content: flex-end; padding-top: .5rem; }
   #lang-select  { width: auto; padding: .2rem .6rem; font-size: .85rem; height: auto; margin: 0; }
+  @media (min-width: 1200px) {
+    .container  { max-width: 110rem; }
+  }
+  @media (max-width: 600px) {
+    body        { font-size: 1.4em; }
+    h1          { font-size: 2.2rem; }
+    h2          { font-size: 1.7rem; }
+    .container  { padding: 0 1rem; }
+  }
 </style>
 <title data-i18n="page_title">Public Key Server</title>
 </head>
@@ -28,6 +47,8 @@
       <option value="de">🇩🇪 Deutsch</option>
       <option value="es">🇪🇸 Español</option>
       <option value="it">🇮🇹 Italiano</option>
+      <option value="uk">🇺🇦 Українська</option>
+      <option value="pl">🇵🇱 Polski</option>
     </select>
   </div>
 
@@ -79,7 +100,9 @@
     fr: { page_title: "Serveur de clés publiques", h1_suffix: "Serveur de clés publiques", h2_search: "Rechercher un certificat PGP", label_index: "Index :", label_verbose: "Détaillé :", label_search: "Chaîne à rechercher", label_fingerprints: "Afficher les empreintes", label_exact: "Correspondance exacte", btn_reset: "Réinitialiser", btn_search: "Rechercher", h2_add: "Ajouter un nouveau certificat PGP au serveur", label_keytext: "Votre clé publique PGP au format armuré", btn_send: "Envoyer" },
     de: { page_title: "Öffentlicher Schlüsselserver", h1_suffix: "Öffentlicher Schlüsselserver", h2_search: "PGP-Zertifikate suchen", label_index: "Index:", label_verbose: "Ausführlich:", label_search: "Suchbegriff", label_fingerprints: "Fingerabdrücke anzeigen", label_exact: "Genaue Übereinstimmung", btn_reset: "Zurücksetzen", btn_search: "Suchen", h2_add: "Neues PGP-Zertifikat zum Server hinzufügen", label_keytext: "Ihr öffentlicher PGP-Schlüssel (ASCII-armored)", btn_send: "Senden" },
     es: { page_title: "Servidor de claves públicas", h1_suffix: "Servidor de claves públicas", h2_search: "Buscar certificados PGP", label_index: "Índice:", label_verbose: "Detallado:", label_search: "Cadena de búsqueda", label_fingerprints: "Mostrar las huellas digitales", label_exact: "Coincidencia exacta", btn_reset: "Reiniciar", btn_search: "Buscar", h2_add: "Añadir un nuevo certificado PGP al servidor", label_keytext: "Su clave pública PGP en formato armored", btn_send: "Enviar" },
-    it: { page_title: "Server di chiavi pubbliche", h1_suffix: "Server di chiavi pubbliche", h2_search: "Cerca certificati PGP", label_index: "Indice:", label_verbose: "Dettagliato:", label_search: "Stringa di ricerca", label_fingerprints: "Mostra le impronte", label_exact: "Corrispondenza esatta", btn_reset: "Reimposta", btn_search: "Cerca", h2_add: "Aggiungi un nuovo certificato PGP al server", label_keytext: "La tua chiave PGP pubblica in formato armored", btn_send: "Invia" }
+    it: { page_title: "Server di chiavi pubbliche", h1_suffix: "Server di chiavi pubbliche", h2_search: "Cerca certificati PGP", label_index: "Indice:", label_verbose: "Dettagliato:", label_search: "Stringa di ricerca", label_fingerprints: "Mostra le impronte", label_exact: "Corrispondenza esatta", btn_reset: "Reimposta", btn_search: "Cerca", h2_add: "Aggiungi un nuovo certificato PGP al server", label_keytext: "La tua chiave PGP pubblica in formato armored", btn_send: "Invia" },
+    uk: { page_title: "Сервер відкритих ключів", h1_suffix: "Сервер відкритих ключів", h2_search: "Пошук сертифікатів PGP", label_index: "Індекс:", label_verbose: "Детально:", label_search: "Рядок пошуку", label_fingerprints: "Показати відбитки", label_exact: "Точна відповідність", btn_reset: "Скинути", btn_search: "Шукати", h2_add: "Додати новий сертифікат PGP на сервер", label_keytext: "Ваш відкритий ключ PGP у форматі armored", btn_send: "Надіслати" },
+    pl: { page_title: "Serwer kluczy publicznych", h1_suffix: "Serwer kluczy publicznych", h2_search: "Wyszukaj certyfikaty PGP", label_index: "Indeks:", label_verbose: "Szczegółowo:", label_search: "Szukany ciąg", label_fingerprints: "Pokaż odciski", label_exact: "Dokładne dopasowanie", btn_reset: "Resetuj", btn_search: "Szukaj", h2_add: "Dodaj nowy certyfikat PGP do serwera", label_keytext: "Twój publiczny klucz PGP w formacie armored", btn_send: "Wyślij" }
   };
 
   function pickLang() {
