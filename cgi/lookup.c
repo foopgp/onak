@@ -121,6 +121,7 @@ int main(int argc, char *argv[])
 	struct openpgp_fingerprint fingerprint;
 	char *search = NULL;
 	char *end = NULL;
+	char *contact_copy = NULL;
 	struct openpgp_publickey *publickey = NULL;
 	struct openpgp_packet_list *packets = NULL;
 	struct openpgp_packet_list *list_end = NULL;
@@ -312,12 +313,32 @@ int main(int argc, char *argv[])
 		dbctx->cleanupdb(dbctx);
 err:
 		cleanuplogthing();
+		/*
+		 * The footer below reads config.server_contact, so we
+		 * stash a copy now and free it after the page is out,
+		 * since cleanupconfig() frees the original.
+		 */
+		if (config.server_contact != NULL &&
+				config.server_contact[0] != '\0') {
+			contact_copy = strdup(config.server_contact);
+		}
 		cleanupconfig();
 	}
 	if (!mrhkp) {
 		puts("<hr>");
-		puts("Produced by onak " ONAK_VERSION );
+		fputs("Produced by onak " ONAK_VERSION, stdout);
+		if (contact_copy != NULL) {
+			fputs(" &mdash; <a href=\"lookup?op=index&amp;search=",
+				stdout);
+			fputs(contact_copy, stdout);
+			fputs("\">contact</a>", stdout);
+		}
+		puts("");
 		end_html();
+	}
+	if (contact_copy != NULL) {
+		free(contact_copy);
+		contact_copy = NULL;
 	}
 
 	if (search != NULL) {

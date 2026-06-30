@@ -43,6 +43,7 @@ struct onak_config config = {
 	.thissite = NULL,
 	.adminemail = NULL,
 	.mta = NULL,
+	.server_contact = NULL,
 	.syncsites = NULL,
 	.logfile = NULL,
 
@@ -277,6 +278,8 @@ static bool parseconfigline(char *line)
 			config.sock_dir = strdup(value);
 		} else if (MATCH("main", "max_reply_keys")) {
 			config.maxkeys = atoi(value);
+		} else if (MATCH("main", "server_contact")) {
+			config.server_contact = strdup(value);
 		/* [mail] section */
 		} else if (MATCH("mail", "maintainer_email")) {
 			config.adminemail = strdup(value);
@@ -557,6 +560,7 @@ void writeconfig(const char *configfile)
 	WRITE_BOOL(config.use_keyd, "use_keyd");
 	WRITE_IF_NOT_NULL(config.sock_dir, "sock_dir");
 	fprintf(conffile, "max_reply_keys=%d\n", config.maxkeys);
+	WRITE_IF_NOT_NULL(config.server_contact, "server_contact");
 	fprintf(conffile, "\n");
 
 	fprintf(conffile, "[verification]\n");
@@ -649,6 +653,10 @@ void cleanupconfig(void) {
 	if (config.mta != NULL) {
 		free(config.mta);
 		config.mta = NULL;
+	}
+	if (config.server_contact != NULL) {
+		free(config.server_contact);
+		config.server_contact = NULL;
 	}
 	if (config.syncsites != NULL) {
 		llfree(config.syncsites, free);

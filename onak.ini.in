@@ -14,6 +14,14 @@ sock_dir=@CMAKE_INSTALL_FULL_RUNSTATEDIR@/onak
 ; get. Setting it to -1 will allow any size of reply.
 max_reply_keys=128
 
+; Operator contact handle, optional. The value is plumbed into the
+; HTML page footer as the search= parameter of a /pks/lookup?op=index
+; link. Typical use: point at the operator's own OpenPGP key with a
+; 0xFINGERPRINT so a visitor can click through to "who runs this".
+; Any string accepted by op=index works (key id, fingerprint, email,
+; user id substring). Leave commented to suppress the contact link.
+;server_contact=0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF
+
 ; Settings related to key verification options available.
 [verification]
 ; Blacklist certain fingerprints (e.g. EVIL32). One fingerprint per line,

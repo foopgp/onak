@@ -63,6 +63,12 @@ struct onak_config {
 	char *adminemail;
 	/** The mta to invoke to send sync mails. */
 	char *mta;
+	/** Operator contact: a string passed as the search= argument
+	 *  to a /pks/lookup?op=index link in the HTML page footer. The
+	 *  expected value is typically a 0xFINGERPRINT pointing at the
+	 *  operator's own key, or any other handle the operator wants
+	 *  visitors to land on. NULL means no contact link is shown. */
+	char *server_contact;
 	/** List of email address for sites we sync with via email */
 	struct ll *syncsites;
 	/** A linked list of sites we sync with. */
