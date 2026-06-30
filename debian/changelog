@@ -1,3 +1,15 @@
+onak-foopgp (0.6.5.foopgp5-1) unstable; urgency=medium
+
+  [ jjbrucker ]
+  * doc/html_lookup/index.html: update and remove contact section
+
+  [ Mnème ]
+  * templates/foopgp: toggle sigs per uid, show revoked in vindex, fix mustache leak
+  * onak-conf: new [main] server_contact + html footer contact link
+  * doc/html_lookup: i18n EN/FR/DE with browser-locale autodetect and selector
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Tue, 30 Jun 2026 02:52:01 +0200
+
 onak-foopgp (0.6.5.foopgp4-1) unstable; urgency=medium
 
   [ jjbrucker ]
