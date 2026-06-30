@@ -657,10 +657,23 @@ static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 					tmpl_bool(false));
 			}
 		}
-		if (verbose) {
-			tmpl_map_set(entry, "sigs",
-				build_sigs_list(dbctx, uids->sigs));
+		/*
+		 * Sigs are emitted whatever the mode, so the foopgp
+		 * template can render an in-place "signatures" toggle
+		 * under every UID in op=index too (vanilla template
+		 * still gates them behind opts.verbose). sig_count
+		 * counts the sigs on this UID, including revocations.
+		 */
+		{
+			struct openpgp_packet_list *s;
+			long long n = 0;
+			for (s = uids->sigs; s != NULL; s = s->next) {
+				n++;
+			}
+			tmpl_map_set(entry, "sig_count", tmpl_int(n));
 		}
+		tmpl_map_set(entry, "sigs",
+			build_sigs_list(dbctx, uids->sigs));
 		tmpl_list_append(out, entry);
 		uids = uids->next;
 	}
@@ -806,10 +819,16 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 			tmpl_map_set(m, "primary_has_email",
 				tmpl_bool(false));
 		}
-		if (verbose) {
-			tmpl_map_set(m, "primary_sigs",
-				build_sigs_list(dbctx, curuid->sigs));
+		{
+			struct openpgp_packet_list *s;
+			long long n = 0;
+			for (s = curuid->sigs; s != NULL; s = s->next) {
+				n++;
+			}
+			tmpl_map_set(m, "primary_sig_count", tmpl_int(n));
 		}
+		tmpl_map_set(m, "primary_sigs",
+			build_sigs_list(dbctx, curuid->sigs));
 		curuid = curuid->next;
 	} else {
 		tmpl_map_set(m, "has_primary_uid", tmpl_bool(false));

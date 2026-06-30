@@ -32,7 +32,11 @@
  *                                  or once per item if value is a list
  *   {{^section}}...{{/section}}    inverted section: render body when value
  *                                  is falsy / empty list
- *   {{!comment}}       ignored
+ *   {{!comment}}       ignored. The body must not contain two
+ *                      consecutive close-mustache chars: the parser
+ *                      closes the comment on the first occurrence
+ *                      (Mustache spec leaves this implementation-
+ *                      defined; we take the naive route).
  *
  * Variable names accept dotted paths (foo.bar.baz). The lookup walks
  * the current context stack from innermost section outwards. The
