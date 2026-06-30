@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
@@ -10,51 +12,112 @@
   .container    { max-width: 60rem; }
   #keytext      { min-height: 12rem; }
   .display-block{ display: block; }
+  .lang-bar     { display: flex; justify-content: flex-end; padding-top: .5rem; }
+  #lang-select  { width: auto; padding: .2rem .6rem; font-size: .85rem; height: auto; margin: 0; }
 </style>
-<title>Public Key Server</title>
+<title data-i18n="page_title">Public Key Server</title>
 </head>
 
 <body>
 <div class="container">
 
-  <h1><a href="https://github.com/foopgp/onak">Onak-foopgp</a> Public Key Server</h1>
+  <div class="lang-bar">
+    <select id="lang-select" title="Language">
+      <option value="en">🇬🇧 English</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="de">🇩🇪 Deutsch</option>
+    </select>
+  </div>
 
-  <h2>Search PGP certificates</h2>
+  <h1><a href="https://github.com/foopgp/onak">Onak-foopgp</a> <span data-i18n="h1_suffix">Public Key Server</span></h1>
+
+  <h2 data-i18n="h2_search">Search PGP certificates</h2>
 
   <form action="/pks/lookup" method="GET">
-    <label for="index">Index:</label>
+    <label for="index" data-i18n="label_index">Index:</label>
     <input type="radio" name="op" value="index" id="index" checked>
 
-    <label for="verbose">Verbose:</label>
+    <label for="verbose" data-i18n="label_verbose">Verbose:</label>
     <input type="radio" name="op" value="vindex" id="verbose">
 
-    <label for="search" class="display-block">Search String</label>
+    <label for="search" class="display-block" data-i18n="label_search">Search String</label>
     <input type="text" name="search" id="search">
 
     <input type="checkbox" name="fingerprint" id="fingerprints">
-    <label for="fingerprints">Show fingerprints</label><br>
+    <label for="fingerprints" data-i18n="label_fingerprints">Show fingerprints</label><br>
 
     <input type="checkbox" name="exact" id="exact">
-    <label for="exact">Exact matchs</label><br>
+    <label for="exact" data-i18n="label_exact">Exact matches</label><br>
 
-    <input class="button-clear" type="reset" value="Reset">
-    <input class="button-primary" type="submit" value="Search">
+    <input class="button-clear" type="reset" value="Reset" data-i18n-value="btn_reset">
+    <input class="button-primary" type="submit" value="Search" data-i18n-value="btn_search">
   </form>
 
-  <h2>Add a new PGP certificate to the server</h2>
+  <h2 data-i18n="h2_add">Add a new PGP certificate to the server</h2>
 
     <p><code>$ gpg --armor --export &lt;email&gt;</code></p>
 
     <form action="/pks/add" method="POST">
-      <label for="keytext">Your armored public PGP key</label>
+      <label for="keytext" data-i18n="label_keytext">Your armored public PGP key</label>
       <textarea name="keytext" id="keytext" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----
 ...
 ...
 ...
 -----END PGP PUBLIC KEY BLOCK----- "></textarea>
-      <input class="button-clear" type="reset" value="Reset">
-      <input class="button-primary" type="submit" value="Send">
+      <input class="button-clear" type="reset" value="Reset" data-i18n-value="btn_reset">
+      <input class="button-primary" type="submit" value="Send" data-i18n-value="btn_send">
     </form>
 
 </div>
+
+<script>
+(function () {
+  var STRINGS = {
+    en: { page_title: "Public Key Server", h1_suffix: "Public Key Server", h2_search: "Search PGP certificates", label_index: "Index:", label_verbose: "Verbose:", label_search: "Search String", label_fingerprints: "Show fingerprints", label_exact: "Exact matches", btn_reset: "Reset", btn_search: "Search", h2_add: "Add a new PGP certificate to the server", label_keytext: "Your armored public PGP key", btn_send: "Send" },
+    fr: { page_title: "Serveur de clés publiques", h1_suffix: "Serveur de clés publiques", h2_search: "Rechercher un certificat PGP", label_index: "Index :", label_verbose: "Détaillé :", label_search: "Chaîne à rechercher", label_fingerprints: "Afficher les empreintes", label_exact: "Correspondance exacte", btn_reset: "Réinitialiser", btn_search: "Rechercher", h2_add: "Ajouter un nouveau certificat PGP au serveur", label_keytext: "Votre clé publique PGP au format armuré", btn_send: "Envoyer" },
+    de: { page_title: "Öffentlicher Schlüsselserver", h1_suffix: "Öffentlicher Schlüsselserver", h2_search: "PGP-Zertifikate suchen", label_index: "Index:", label_verbose: "Ausführlich:", label_search: "Suchbegriff", label_fingerprints: "Fingerabdrücke anzeigen", label_exact: "Genaue Übereinstimmung", btn_reset: "Zurücksetzen", btn_search: "Suchen", h2_add: "Neues PGP-Zertifikat zum Server hinzufügen", label_keytext: "Ihr öffentlicher PGP-Schlüssel (ASCII-armored)", btn_send: "Senden" }
+  };
+
+  function pickLang() {
+    var stored = null;
+    try { stored = sessionStorage.getItem("onak-lang"); } catch (e) {}
+    if (stored && STRINGS[stored]) return stored;
+    var nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+    return STRINGS[nav] ? nav : "en";
+  }
+
+  function apply(lang) {
+    var dict = STRINGS[lang] || STRINGS.en;
+    document.documentElement.setAttribute("lang", lang);
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute("data-i18n");
+      if (dict[k]) {
+        if (nodes[i].tagName === "TITLE") {
+          document.title = dict[k];
+        } else {
+          nodes[i].textContent = dict[k];
+        }
+      }
+    }
+    nodes = document.querySelectorAll("[data-i18n-value]");
+    for (var j = 0; j < nodes.length; j++) {
+      var v = nodes[j].getAttribute("data-i18n-value");
+      if (dict[v]) nodes[j].value = dict[v];
+    }
+  }
+
+  var sel = document.getElementById("lang-select");
+  var lang = pickLang();
+  sel.value = lang;
+  apply(lang);
+
+  sel.addEventListener("change", function () {
+    var L = sel.value;
+    try { sessionStorage.setItem("onak-lang", L); } catch (e) {}
+    apply(L);
+  });
+})();
+</script>
 </body>
+</html>
