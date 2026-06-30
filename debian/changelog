@@ -1,3 +1,12 @@
+onak-foopgp (0.6.5.foopgp6-1) unstable; urgency=medium
+
+  [ Mnème ]
+  * templates/foopgp: ISO-8601 dates, modern algo name, primary key expiration
+  * i18n: add Spanish, Italian, Ukrainian, Polski to landing page and foopgp template
+  * responsive: condense landing, mobile-friendly template
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Tue, 30 Jun 2026 12:18:53 +0200
+
 onak-foopgp (0.6.5.foopgp5-1) unstable; urgency=medium
 
   [ jjbrucker ]
