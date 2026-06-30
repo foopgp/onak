@@ -25,6 +25,8 @@
 #include <time.h>
 
 #include "decodekey.h"
+#include "aged.h"
+#include "decodekey.h"
 #include "keydb.h"
 #include "keyid.h"
 #include "keyindex.h"
@@ -527,6 +529,81 @@ static char *format_fp_string(const struct openpgp_fingerprint *fp)
 	return buf;
 }
 
+/*
+ * Return a freshly-allocated string giving the public-key algorithm
+ * in the modern gpg-list-keys flavour: "ed25519", "rsa4096", "ed448",
+ * "cv25519", "nistp256", … and falls back to "<algo_char><bits>" for
+ * algorithms we do not have a friendlier name for. Mirrors the curve
+ * detection done by keylength() above so the two stay in sync.
+ */
+static char *pkalgo_modern_str(struct openpgp_packet *keydata,
+		unsigned int bits)
+{
+	uint8_t algo;
+	uint8_t keyofs;
+	enum onak_oid oid;
+
+	if (keydata == NULL || keydata->length < 6) {
+		return strdup("?");
+	}
+	if (keydata->data[0] == 2 || keydata->data[0] == 3) {
+		if (keydata->length < 8) {
+			return strdup("?");
+		}
+		algo = keydata->data[7];
+	} else if (keydata->data[0] == 4 || keydata->data[0] == 5) {
+		algo = keydata->data[5];
+	} else {
+		return strdup("?");
+	}
+
+	switch (algo) {
+	case OPENPGP_PKALGO_RSA:
+	case OPENPGP_PKALGO_RSA_ENC:
+	case OPENPGP_PKALGO_RSA_SIGN:
+		return strdup_printf("rsa%u", bits);
+	case OPENPGP_PKALGO_DSA:
+		return strdup_printf("dsa%u", bits);
+	case OPENPGP_PKALGO_ELGAMAL_ENC:
+	case OPENPGP_PKALGO_ELGAMAL_SIGN:
+		return strdup_printf("elg%u", bits);
+	}
+
+	if (keydata->data[0] != 4 && keydata->data[0] != 5) {
+		return strdup_printf("%c%u", pkalgo2char(algo), bits);
+	}
+	keyofs = (keydata->data[0] == 4) ? 6 : 10;
+	if (keydata->length <= keyofs) {
+		return strdup_printf("%c%u", pkalgo2char(algo), bits);
+	}
+	oid = onak_parse_oid(&keydata->data[keyofs],
+			keydata->length - keyofs);
+	switch (algo) {
+	case OPENPGP_PKALGO_EDDSA:
+		if (oid == ONAK_OID_ED25519) {
+			return strdup("ed25519");
+		}
+		return strdup_printf("eddsa%u", bits);
+	case OPENPGP_PKALGO_EC:    /* ECDH */
+		if (oid == ONAK_OID_CURVE25519) {
+			return strdup("cv25519");
+		}
+		return strdup_printf("ecdh%u", bits);
+	case OPENPGP_PKALGO_ECDSA:
+		switch (oid) {
+		case ONAK_OID_NISTP256:        return strdup("nistp256");
+		case ONAK_OID_NISTP384:        return strdup("nistp384");
+		case ONAK_OID_NISTP521:        return strdup("nistp521");
+		case ONAK_OID_BRAINPOOLP256R1: return strdup("brainpoolP256r1");
+		case ONAK_OID_BRAINPOOLP384R1: return strdup("brainpoolP384r1");
+		case ONAK_OID_BRAINPOOLP512R1: return strdup("brainpoolP512r1");
+		case ONAK_OID_SECP256K1:       return strdup("secp256k1");
+		default:                       return strdup_printf("ecdsa%u", bits);
+		}
+	}
+	return strdup_printf("%c%u", pkalgo2char(algo), bits);
+}
+
 static struct tmpl_value *build_sigs_list(struct onak_dbctx *dbctx,
 		struct openpgp_packet_list *sigs)
 {
@@ -772,15 +849,59 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 		tmpl_string_take(strdup_printf("%5d", length)));
 	tmpl_map_set(m, "algo_char",
 		tmpl_string_take(strdup_printf("%c", pkalgo2char(type))));
+	/*
+	 * algo_modern: human-friendly name used by the foopgp template
+	 * (e.g. ed25519, rsa4096). The vanilla template still uses the
+	 * legacy algo_char/bits_padded pair to keep the visual look-alike
+	 * to gpg --keyserver output.
+	 */
+	tmpl_map_set(m, "algo_modern",
+		tmpl_string_take(pkalgo_modern_str(key->publickey, length)));
 	tmpl_map_set(m, "keyid_hex16",
 		tmpl_string_take(
 			strdup_printf("%016" PRIX64, keyid)));
+	/*
+	 * Both date formats are exposed: date_str stays YYYY/MM/DD for
+	 * the vanilla template (legacy gpg/HKP look), date_str_iso is
+	 * the foopgp template's preferred YYYY-MM-DD form (RFC 3339).
+	 */
 	tmpl_map_set(m, "date_str",
 		tmpl_string_take(
 			strdup_printf("%04d/%02d/%02d",
 				created.tm_year + 1900,
 				created.tm_mon + 1,
 				created.tm_mday)));
+	tmpl_map_set(m, "date_str_iso",
+		tmpl_string_take(
+			strdup_printf("%04d-%02d-%02d",
+				created.tm_year + 1900,
+				created.tm_mon + 1,
+				created.tm_mday)));
+	/*
+	 * Primary-key expiration. key_expiration_time() returns 0 when the
+	 * key carries no expiry subpacket — a state worth flagging visually
+	 * since setting one is a foopgp-recommended practice. When set, the
+	 * is_expired flag lets the template paint a past expiry red.
+	 */
+	{
+		time_t expiry = key_expiration_time(key);
+		if (expiry > 0) {
+			struct tm exp_tm;
+			gmtime_r(&expiry, &exp_tm);
+			tmpl_map_set(m, "has_expiry", tmpl_bool(true));
+			tmpl_map_set(m, "expires_str_iso",
+				tmpl_string_take(
+					strdup_printf("%04d-%02d-%02d",
+						exp_tm.tm_year + 1900,
+						exp_tm.tm_mon + 1,
+						exp_tm.tm_mday)));
+			tmpl_map_set(m, "is_expired",
+				tmpl_bool(expiry < time(NULL)));
+		} else {
+			tmpl_map_set(m, "has_expiry", tmpl_bool(false));
+			tmpl_map_set(m, "is_expired", tmpl_bool(false));
+		}
+	}
 	tmpl_map_set(m, "revoked", tmpl_bool(key->revoked));
 
 	/*
