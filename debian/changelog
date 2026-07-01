@@ -1,3 +1,15 @@
+onak-foopgp (0.6.5.foopgp7-1) unstable; urgency=medium
+
+  [ Mnème ]
+  * cgi/getcgi.c: modernise start_html — HTML5 + viewport meta
+  * templates/foopgp: factorise CSS, drop vendor-specific font stacks
+  * cgi: unified footer format across lookup+gpgwww, wire gpgwww contact
+  * cmake: prefer debian/changelog for ONAK_VERSION, fallback to git
+  * i18n empty state: route "Key not found" through the template
+  * templates/foopgp: ⬇️  on Download, revocation date + strict tooltip on REVOKED
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Wed, 01 Jul 2026 14:04:35 +0200
+
 onak-foopgp (0.6.5.foopgp6-1) unstable; urgency=medium
 
   [ Mnème ]
