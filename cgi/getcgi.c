@@ -36,12 +36,16 @@
 void start_html(const char *title)
 {
 	puts("Content-Type: text/html; charset=UTF-8\n");
-	puts("<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 3.2 Final//EN'>");
-	puts("<HTML>");
-	puts("<HEAD>");
-	printf("<TITLE>%s</TITLE>\n", title);
-	puts("</HEAD>");
-	puts("<BODY>");
+	puts("<!DOCTYPE html>");
+	puts("<html>");
+	puts("<head>");
+	/* Without this, mobile browsers assume a ~980px desktop viewport
+	 * and shrink the page to ~37% on a phone screen — media queries
+	 * never fire and everything reads tiny. */
+	puts("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+	printf("<title>%s</title>\n", title);
+	puts("</head>");
+	puts("<body>");
 
 	return;
 }
@@ -53,8 +57,8 @@ void start_html(const char *title)
  */
 void end_html(void)
 {
-	puts("</BODY>");
-	puts("</HTML>");
+	puts("</body>");
+	puts("</html>");
 
 	return;
 }
