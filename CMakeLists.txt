@@ -41,23 +41,39 @@ else()
 	set(UNUSED_ATTRIB "")
 endif()
 
-# Pick up a git based version number for development builds
-find_package(Git)
-if (GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
-	if (EXISTS "${CMAKE_SOURCE_DIR}/.git/refs/tags/onak-0.6.2")
+# Prefer the debian/changelog head version — for onak-foopgp Debian
+# builds, that is the exact string we ship (e.g. 0.6.5.foopgp6-1), so
+# the footer traces the deployed package. Fall back to git describe /
+# rev-parse for developer builds and to PROJECT_VERSION otherwise.
+if (EXISTS "${CMAKE_SOURCE_DIR}/debian/changelog")
+	find_program(DPKG_PARSECHANGELOG dpkg-parsechangelog)
+	if (DPKG_PARSECHANGELOG)
 		EXECUTE_PROCESS(
-			COMMAND ${GIT_EXECUTABLE} describe --tags --dirty
-			OUTPUT_VARIABLE GIT_VERSION
-			OUTPUT_STRIP_TRAILING_WHITESPACE)
-		string(REPLACE "onak-" "" VERSION ${GIT_VERSION})
-	else()
-		EXECUTE_PROCESS(
-			COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+			COMMAND ${DPKG_PARSECHANGELOG}
+				-l${CMAKE_SOURCE_DIR}/debian/changelog
+				--show-field Version
 			OUTPUT_VARIABLE VERSION
 			OUTPUT_STRIP_TRAILING_WHITESPACE)
 	endif()
-else()
-	set(VERSION ${PROJECT_VERSION})
+endif()
+if (NOT VERSION)
+	find_package(Git)
+	if (GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+		if (EXISTS "${CMAKE_SOURCE_DIR}/.git/refs/tags/onak-0.6.2")
+			EXECUTE_PROCESS(
+				COMMAND ${GIT_EXECUTABLE} describe --tags --dirty
+				OUTPUT_VARIABLE GIT_VERSION
+				OUTPUT_STRIP_TRAILING_WHITESPACE)
+			string(REPLACE "onak-" "" VERSION ${GIT_VERSION})
+		else()
+			EXECUTE_PROCESS(
+				COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+				OUTPUT_VARIABLE VERSION
+				OUTPUT_STRIP_TRAILING_WHITESPACE)
+		endif()
+	else()
+		set(VERSION ${PROJECT_VERSION})
+	endif()
 endif()
 
 # Core objects
