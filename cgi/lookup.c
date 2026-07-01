@@ -326,14 +326,12 @@ err:
 	}
 	if (!mrhkp) {
 		puts("<hr>");
-		fputs("Produced by onak " ONAK_VERSION, stdout);
+		puts(" &mdash; onak " ONAK_VERSION " &mdash;");
 		if (contact_copy != NULL) {
-			fputs(" &mdash; <a href=\"lookup?op=index&amp;search=",
-				stdout);
+			puts(" <a href=\"lookup?op=index&amp;search=");
 			fputs(contact_copy, stdout);
-			fputs("\">contact</a>", stdout);
+			puts("\">contact</a>");
 		}
-		puts("");
 		end_html();
 	}
 	if (contact_copy != NULL) {

@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
 	char     **cgiparams = NULL;	/* Our CGI parameter block */
 	uint64_t   from = 0, to = 0;
 	int        op = OP_UNKNOWN;
+	char      *contact_copy = NULL;
 	struct onak_dbctx *dbctx;
 
 	cgiparams = getcgivars(argc, argv);
@@ -200,12 +201,30 @@ int main(int argc, char *argv[])
 
 err:
 	cleanuplogthing();
+	/*
+	 * The footer below reads config.server_contact, so we stash a
+	 * copy now and free it after the page is out — cleanupconfig()
+	 * frees the original. Mirror of the pattern in cgi/lookup.c.
+	 */
+	if (config.server_contact != NULL &&
+			config.server_contact[0] != '\0') {
+		contact_copy = strdup(config.server_contact);
+	}
 	cleanupconfig();
 
 	if (op != OP_GET) {
-		puts("<HR>");
-		puts("Produced by gpgwww " ONAK_VERSION ", part of onak. ");
+		puts("<hr>");
+		puts(" &mdash; gpgwww (onak " ONAK_VERSION ") &mdash;");
+		if (contact_copy != NULL) {
+			puts(" <a href=\"lookup?op=index&amp;search=");
+			fputs(contact_copy, stdout);
+			puts("\">contact</a>");
+		}
 		end_html();
+	}
+	if (contact_copy != NULL) {
+		free(contact_copy);
+		contact_copy = NULL;
 	}
 
 	cleanupcgi(cgiparams);
