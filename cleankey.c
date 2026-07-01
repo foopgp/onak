@@ -310,11 +310,14 @@ int clean_key_signatures(struct onak_dbctx *dbctx,
 /*
  * Cap the number of UIDs / UATs we accept on a key. Defends against
  * keys carrying an absurd number of (potentially forged) packets — the
- * 2019 SKS-style poisoning vector. We keep the first N of each kind in
- * the packet list and drop the rest; pairing this with the merge.c
- * append-at-tail behaviour means surviving packets are the older ones
- * we already had, and a flood arriving in a subsequent merge is
- * truncated to the cap.
+ * 2019 SKS-style poisoning vector. Semantic is FIFO: we keep the last
+ * N of each kind and drop the oldest excess. Since a UID/UAT packet
+ * only survives further cleaning when it carries a valid self-sig,
+ * only the key holder can ever push new UID/UATs anyway — FIFO lets
+ * that holder keep evolving the active face of their certificate
+ * (rotate an old alias out, add a fresh one in) once the cap is hit,
+ * where a keep-oldest cap would ossify the certificate at whatever
+ * was first published.
  */
 #define MAX_UIDS_PER_KEY	32
 #define MAX_UATS_PER_KEY	4
@@ -324,27 +327,39 @@ static int cap_packet_type(struct openpgp_publickey *key,
 {
 	struct openpgp_signedpacket_list **curuid;
 	struct openpgp_signedpacket_list *tmp;
-	unsigned int                      count = 0;
+	unsigned int                      total = 0;
+	unsigned int                      to_drop;
+	unsigned int                      dropped_head = 0;
 	int                               dropped = 0;
 
 	log_assert(key != NULL);
-	curuid = &key->uids;
-	while (*curuid != NULL) {
+	/* Pass 1: count matching packets. */
+	for (curuid = &key->uids; *curuid != NULL;
+			curuid = &(*curuid)->next) {
 		if ((*curuid)->packet->tag == tag) {
-			if (count < max) {
-				count++;
-				curuid = &(*curuid)->next;
-			} else {
-				logthing(LOGTHING_INFO,
-					"Dropping packet of type %d "
-					"beyond cap %u",
-					tag, max);
-				tmp = *curuid;
-				*curuid = (*curuid)->next;
-				tmp->next = NULL;
-				free_signedpacket_list(tmp);
-				dropped++;
-			}
+			total++;
+		}
+	}
+	if (total <= max) {
+		return 0;
+	}
+	to_drop = total - max;
+	/* Pass 2: drop the first `to_drop` matching packets — head of
+	 * the list, which under merge.c's append-at-tail is the oldest
+	 * batch we saw. Surviving suffix is the newest max packets. */
+	curuid = &key->uids;
+	while (*curuid != NULL && dropped_head < to_drop) {
+		if ((*curuid)->packet->tag == tag) {
+			logthing(LOGTHING_INFO,
+				"Dropping packet of type %d "
+				"beyond cap %u",
+				tag, max);
+			tmp = *curuid;
+			*curuid = (*curuid)->next;
+			tmp->next = NULL;
+			free_signedpacket_list(tmp);
+			dropped_head++;
+			dropped++;
 		} else {
 			curuid = &(*curuid)->next;
 		}
