@@ -1,7 +1,8 @@
 {{!
  foopgp HTML template for op=index / op=vindex.
- Renders as a fragment that fits inside the existing CGI <BODY>
- wrapper from start_html. Two-column layout per key: UATs left
+ Renders as a fragment that fits inside the existing CGI body
+ wrapper from start_html (HTML5, viewport-scaled).
+ Two-column layout per key: UATs left
  (180x180, letterboxed to preserve aspect ratio), UIDs right. The
  KeyId pub-line link, the Download button and the photo URL all
  target ?search=0x followed by the full fingerprint; sig issuer
@@ -18,67 +19,97 @@
  two consecutive close-mustache chars; the naive parser closes
  the comment on the first such occurrence.
 }}<style>
-.fp-card { display: flex; flex-wrap: wrap; gap: 1em; border: 1px solid #e3e6ea; border-radius: 8px; padding: 1em; margin: 1em 0; background: #fafbfc; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #333; max-width: 1100px; }
-.fp-uat-col { display: flex; flex-direction: column; gap: .5em; flex: 0 0 180px; }
-.fp-uat-img { display: block; width: 180px; height: 180px; object-fit: contain; background: #fff; border-radius: 4px; border: 1px solid #e3e6ea; }
-.fp-uat-img.fp-revoked-uat { opacity: .35; filter: grayscale(1); border-color: #b00020; }
-.fp-uid-col { flex: 1; min-width: 0; }
-.fp-pub { display: flex; flex-wrap: wrap; align-items: center; gap: .75em; margin-bottom: .5em; }
-.fp-keyid { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-weight: 600; color: #1976D2; text-decoration: none; }
-.fp-keyid:hover { text-decoration: underline; }
-.fp-date { color: #777; font-size: .92em; cursor: help; }
-.fp-algo { color: #444; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: .88em; }
-.fp-expires { color: #555; font-size: .85em; }
-.fp-expired { background: #b00020; color: #fff; padding: .15em .55em; border-radius: 3px; font-size: .85em; font-weight: 600; }
-.fp-no-expiry { background: #fb8c00; color: #fff; padding: .15em .55em; border-radius: 3px; font-size: .8em; font-weight: 600; cursor: help; }
-.fp-download { display: inline-block; padding: .35em .9em; background: #1976D2; color: #fff; border-radius: 4px; text-decoration: none; font-size: .9em; font-weight: 500; }
-.fp-download:hover { filter: brightness(1.1); }
-.fp-revoked { display: inline-block; padding: .25em .6em; background: #b00020; color: #fff; border-radius: 4px; font-size: .85em; font-weight: 600; letter-spacing: .05em; }
-.fp-revoked-small { display: inline-block; margin-left: .4em; padding: .05em .4em; background: #b00020; color: #fff; border-radius: 3px; font-size: .75em; font-weight: 600; vertical-align: middle; }
-.fp-fp { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; letter-spacing: .03em; margin: .5em 0; padding: .4em .6em; background: #fff; border: 1px solid #e3e6ea; border-radius: 4px; cursor: help; }
-.fp-uid-block { padding: .25em 0; border-bottom: 1px dotted #e3e6ea; }
-.fp-uid-block:last-child { border-bottom: none; }
-.fp-uid-block.fp-revoked-row { opacity: .55; }
-.fp-uid { display: inline-block; color: #222; text-decoration: none; padding: .35em .4em; }
-.fp-uid[href^="mailto:"]:hover { text-decoration: underline; color: #1976D2; }
-.fp-sigs { margin-top: .15em; margin-left: 1em; }
-.fp-sigs > summary { cursor: pointer; color: #1976D2; font-size: .85em; padding: .15em .4em; user-select: none; list-style: none; display: inline-block; }
-.fp-sigs > summary::-webkit-details-marker { display: none; }
-.fp-sigs > summary:hover { text-decoration: underline; }
-.fp-sigs[open] > summary { color: #444; }
-.fp-sigs-list { margin-top: .2em; padding-left: .5em; border-left: 2px solid #e3e6ea; }
-.fp-sig { padding: .2em 0; font-size: .9em; }
-.fp-sig.rev { background: #fff5f5; padding-left: .3em; border-radius: 3px; }
-.fp-sigkid { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; color: #1976D2; text-decoration: none; font-weight: 500; }
-.fp-sigkind { display: inline-block; min-width: 2.5em; color: #777; font-family: ui-monospace, monospace; font-size: .85em; }
-.fp-sig.rev .fp-sigkind { color: #b00020; font-weight: 600; }
-.fp-signer { color: #444; margin-left: .4em; }
-.fp-empty { padding: 1em; color: #777; }
-/* Phone portrait. Below ~600px the base 15px font + .85em sigs reads
- * tiny on a finger-sized target, and the SHA-1 fingerprint (49 chars
- * with separators) overflows. Bump the readable strings up, let the
- * fingerprint wrap at the existing spaces (word-spacing keeps each
- * 4-hex group atomic), and stack the UAT column on top so the UID
- * column gets the full width instead of a 180px-narrower fold. */
+:root {
+  --brand:  #1976D2;
+  --danger: #b00020;
+  --warn:   #fb8c00;
+  --line:   #e3e6ea;
+  --bg:     #fafbfc;
+  --text:   #333;
+  --dim:    #444;
+  --muted:  #777;
+}
+.fp-card {
+  display: flex; flex-wrap: wrap; gap: 1em;
+  padding: 1em; margin: 1em 0;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  font-family: sans-serif; line-height: 1.5;
+  max-width: 1100px;
+}
+.fp-card a           { text-decoration: none; }
+.fp-card a:hover     { text-decoration: underline; }
+.fp-card .rev        { opacity: .55; }
+.fp-card img.rev     { opacity: .35; filter: grayscale(1); border-color: var(--danger); }
+
+.fp-uat-col          { display: flex; flex-direction: column; gap: .5em; flex: 0 0 180px; }
+.fp-uat-img          { display: block; width: 180px; height: 180px; object-fit: contain;
+                       background: #fff; border: 1px solid var(--line); border-radius: 4px; }
+
+.fp-uid-col          { flex: 1; min-width: 0; }
+
+.fp-pub              { display: flex; flex-wrap: wrap; align-items: center; gap: .75em; margin-bottom: .5em; }
+.fp-keyid, .fp-sigkid { color: var(--brand); font-family: monospace; font-weight: 600; }
+.fp-algo, .fp-fp, .fp-sigkind { font-family: monospace; }
+.fp-date             { color: var(--muted); font-size: .92em; cursor: help; }
+.fp-algo             { color: var(--dim); font-size: .88em; }
+.fp-expires          { color: #555; font-size: .85em; }
+
+.fp-badge            { display: inline-block; color: #fff;
+                       padding: .15em .55em; border-radius: 3px;
+                       font-size: .85em; font-weight: 600; }
+.fp-badge.expired    { background: var(--danger); }
+.fp-badge.no-expiry  { background: var(--warn); font-size: .8em; cursor: help; }
+.fp-badge.revoked    { background: var(--danger); padding: .25em .6em; letter-spacing: .05em; }
+.fp-badge.mini       { background: var(--danger); padding: .05em .4em; font-size: .75em;
+                       margin-left: .4em; vertical-align: middle; }
+
+.fp-download         { display: inline-block; color: #fff; background: var(--brand);
+                       padding: .35em .9em; border-radius: 4px;
+                       font-size: .9em; font-weight: 500; }
+.fp-download:hover   { filter: brightness(1.1); text-decoration: none; }
+
+.fp-fp               { margin: .5em 0; padding: .4em .6em;
+                       background: #fff; border: 1px solid var(--line); border-radius: 4px;
+                       letter-spacing: .03em; cursor: help; }
+
+.fp-uid-block                    { padding: .25em 0; border-bottom: 1px dotted var(--line); }
+.fp-uid-block:last-child         { border-bottom: none; }
+.fp-uid                          { display: inline-block; color: #222; padding: .35em .4em; }
+.fp-uid[href^="mailto:"]:hover   { color: var(--brand); }
+
+.fp-sigs                         { margin: .15em 0 0 1em; }
+.fp-sigs summary                 { display: inline-block; color: var(--brand); cursor: pointer;
+                                   padding: .15em .4em; font-size: .85em; list-style: none; }
+.fp-sigs summary::-webkit-details-marker { display: none; }
+.fp-sigs[open] summary           { color: var(--dim); }
+.fp-sigs-list                    { margin-top: .2em; padding-left: .5em; border-left: 2px solid var(--line); }
+.fp-sig                          { padding: .2em 0; font-size: .9em; }
+.fp-sig.rev                      { background: #fff5f5; padding-left: .3em; border-radius: 3px; opacity: 1; }
+.fp-sig.rev .fp-sigkind          { color: var(--danger); font-weight: 600; }
+.fp-sigkind                      { display: inline-block; min-width: 2.5em; color: var(--muted); font-size: .85em; }
+.fp-sigkid                       { font-weight: 500; }
+.fp-signer                       { color: var(--dim); margin-left: .4em; }
+.fp-empty                        { padding: 1em; color: var(--muted); }
+
+/* Portrait phones: stack the UAT above the UIDs (full-width photo,
+ * full-width identifiers) and let the SHA-1 fingerprint wrap at the
+ * spaces between its 4-hex groups. Font sizes are left to the browser
+ * defaults — the viewport meta emitted by start_html means 1rem is
+ * already ~16px on any modern phone. */
 @media (max-width: 600px) {
-  .fp-card { font-size: 17px; gap: .5em; padding: .75em; }
   .fp-uat-col { flex: 0 0 100%; align-items: center; }
   .fp-uat-img { width: 100%; max-width: 240px; height: auto; aspect-ratio: 1 / 1; }
-  .fp-pub { gap: .5em; }
-  .fp-keyid { font-size: 1.05em; }
-  .fp-date, .fp-algo { font-size: .95em; }
-  .fp-fp { font-size: 1em; letter-spacing: 0; word-spacing: .2em; word-break: keep-all; overflow-wrap: break-word; line-height: 1.4; }
-  .fp-uid { font-size: 1.05em; padding: .45em .3em; }
-  .fp-sigs > summary { font-size: 1em; padding: .3em .4em; }
+  .fp-fp      { letter-spacing: 0; word-spacing: .2em; word-break: keep-all; overflow-wrap: break-word; }
 }
 </style>
 {{^keys}}<p class="fp-empty" data-i18n="no_result">Key not found.</p>{{/keys}}
 {{#keys}}<div class="fp-card">
-  <div class="fp-uat-col">{{#other_uids}}{{#is_uat}}<img class="fp-uat-img{{#revoked}} fp-revoked-uat{{/revoked}}" src="lookup?op=photo&search=0x{{fingerprint_hex_full}}&idx={{uat_index}}" alt="" loading="lazy"{{#revoked}} data-i18n-tooltip="revoked"{{/revoked}}>{{/is_uat}}{{/other_uids}}</div>
+  <div class="fp-uat-col">{{#other_uids}}{{#is_uat}}<img class="fp-uat-img{{#revoked}} rev{{/revoked}}" src="lookup?op=photo&search=0x{{fingerprint_hex_full}}&idx={{uat_index}}" alt="" loading="lazy"{{#revoked}} data-i18n-tooltip="revoked"{{/revoked}}>{{/is_uat}}{{/other_uids}}</div>
   <div class="fp-uid-col">
-    <div class="fp-pub"><a class="fp-keyid" href="lookup?op=index&search=0x{{fingerprint_hex_full}}" data-i18n-tooltip="keyid_tooltip">0x{{keyid_hex16}}</a><span class="fp-algo" data-i18n-tooltip="algo_tooltip">{{algo_modern}}</span><span class="fp-date" data-i18n-tooltip="date_tooltip">{{date_str_iso}}</span>{{#has_expiry}}{{#is_expired}}<span class="fp-expired" data-i18n-tooltip="expired_tooltip"><span data-i18n="expired">expired</span>: {{expires_str_iso}}</span>{{/is_expired}}{{^is_expired}}<span class="fp-expires" data-i18n-tooltip="expires_tooltip"><span data-i18n="expires">expires</span>: {{expires_str_iso}}</span>{{/is_expired}}{{/has_expiry}}{{^has_expiry}}<span class="fp-no-expiry" data-i18n="no_expiry" data-i18n-tooltip="no_expiry_tooltip">no expiration set</span>{{/has_expiry}}{{#revoked}}<span class="fp-revoked" data-i18n="revoked">REVOKED</span>{{/revoked}}<a class="fp-download" href="lookup?op=get&search=0x{{fingerprint_hex_full}}" data-i18n="download" data-i18n-tooltip="download_tooltip">Download</a></div>
+    <div class="fp-pub"><a class="fp-keyid" href="lookup?op=index&search=0x{{fingerprint_hex_full}}" data-i18n-tooltip="keyid_tooltip">0x{{keyid_hex16}}</a><span class="fp-algo" data-i18n-tooltip="algo_tooltip">{{algo_modern}}</span><span class="fp-date" data-i18n-tooltip="date_tooltip">{{date_str_iso}}</span>{{#has_expiry}}{{#is_expired}}<span class="fp-badge expired" data-i18n-tooltip="expired_tooltip"><span data-i18n="expired">expired</span>: {{expires_str_iso}}</span>{{/is_expired}}{{^is_expired}}<span class="fp-expires" data-i18n-tooltip="expires_tooltip"><span data-i18n="expires">expires</span>: {{expires_str_iso}}</span>{{/is_expired}}{{/has_expiry}}{{^has_expiry}}<span class="fp-badge no-expiry" data-i18n="no_expiry" data-i18n-tooltip="no_expiry_tooltip">no expiration set</span>{{/has_expiry}}{{#revoked}}<span class="fp-badge revoked" data-i18n="revoked">REVOKED</span>{{/revoked}}<a class="fp-download" href="lookup?op=get&search=0x{{fingerprint_hex_full}}" data-i18n="download" data-i18n-tooltip="download_tooltip">Download</a></div>
     <div class="fp-fp" data-i18n-tooltip="fingerprint_tooltip">{{fingerprint_formatted_trimmed}}</div>
-    <div class="fp-uids">{{#has_primary_uid}}<div class="fp-uid-block">{{#primary_has_email}}<a class="fp-uid" href="mailto:{{primary_email}}">{{primary_uid}}</a>{{/primary_has_email}}{{^primary_has_email}}<span class="fp-uid">{{primary_uid}}</span>{{/primary_has_email}}<details class="fp-sigs"{{#opts.verbose}} open{{/opts.verbose}}><summary data-i18n-tooltip="sig_toggle_tooltip"><span data-i18n="signatures">signatures</span>: {{primary_sig_count}}</summary><div class="fp-sigs-list">{{#primary_sigs}}<div class="fp-sig{{#kind_is_rev}} rev{{/kind_is_rev}}"><span class="fp-sigkind">{{kind}}</span><a class="fp-sigkid" href="lookup?op=index&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>{{#signer_uid_known}}<span class="fp-signer">{{signer_uid}}</span>{{/signer_uid_known}}{{^signer_uid_known}}<span class="fp-signer" data-i18n="user_not_found">[user id not found]</span>{{/signer_uid_known}}</div>{{/primary_sigs}}</div></details></div>{{/has_primary_uid}}{{#other_uids}}{{^is_uat}}<div class="fp-uid-block{{#revoked}} fp-revoked-row{{/revoked}}">{{#has_email}}<a class="fp-uid" href="mailto:{{email}}">{{text}}</a>{{/has_email}}{{^has_email}}<span class="fp-uid">{{text}}</span>{{/has_email}}{{#revoked}}<span class="fp-revoked-small" data-i18n="revoked">REVOKED</span>{{/revoked}}<details class="fp-sigs"{{#opts.verbose}} open{{/opts.verbose}}><summary data-i18n-tooltip="sig_toggle_tooltip"><span data-i18n="signatures">signatures</span>: {{sig_count}}</summary><div class="fp-sigs-list">{{#sigs}}<div class="fp-sig{{#kind_is_rev}} rev{{/kind_is_rev}}"><span class="fp-sigkind">{{kind}}</span><a class="fp-sigkid" href="lookup?op=index&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>{{#signer_uid_known}}<span class="fp-signer">{{signer_uid}}</span>{{/signer_uid_known}}{{^signer_uid_known}}<span class="fp-signer" data-i18n="user_not_found">[user id not found]</span>{{/signer_uid_known}}</div>{{/sigs}}</div></details></div>{{/is_uat}}{{/other_uids}}</div>
+    <div class="fp-uids">{{#has_primary_uid}}<div class="fp-uid-block">{{#primary_has_email}}<a class="fp-uid" href="mailto:{{primary_email}}">{{primary_uid}}</a>{{/primary_has_email}}{{^primary_has_email}}<span class="fp-uid">{{primary_uid}}</span>{{/primary_has_email}}<details class="fp-sigs"{{#opts.verbose}} open{{/opts.verbose}}><summary data-i18n-tooltip="sig_toggle_tooltip"><span data-i18n="signatures">signatures</span>: {{primary_sig_count}}</summary><div class="fp-sigs-list">{{#primary_sigs}}<div class="fp-sig{{#kind_is_rev}} rev{{/kind_is_rev}}"><span class="fp-sigkind">{{kind}}</span><a class="fp-sigkid" href="lookup?op=index&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>{{#signer_uid_known}}<span class="fp-signer">{{signer_uid}}</span>{{/signer_uid_known}}{{^signer_uid_known}}<span class="fp-signer" data-i18n="user_not_found">[user id not found]</span>{{/signer_uid_known}}</div>{{/primary_sigs}}</div></details></div>{{/has_primary_uid}}{{#other_uids}}{{^is_uat}}<div class="fp-uid-block{{#revoked}} rev{{/revoked}}">{{#has_email}}<a class="fp-uid" href="mailto:{{email}}">{{text}}</a>{{/has_email}}{{^has_email}}<span class="fp-uid">{{text}}</span>{{/has_email}}{{#revoked}}<span class="fp-badge mini" data-i18n="revoked">REVOKED</span>{{/revoked}}<details class="fp-sigs"{{#opts.verbose}} open{{/opts.verbose}}><summary data-i18n-tooltip="sig_toggle_tooltip"><span data-i18n="signatures">signatures</span>: {{sig_count}}</summary><div class="fp-sigs-list">{{#sigs}}<div class="fp-sig{{#kind_is_rev}} rev{{/kind_is_rev}}"><span class="fp-sigkind">{{kind}}</span><a class="fp-sigkid" href="lookup?op=index&search=0x{{keyid_hex16}}">0x{{keyid_hex16}}</a>{{#signer_uid_known}}<span class="fp-signer">{{signer_uid}}</span>{{/signer_uid_known}}{{^signer_uid_known}}<span class="fp-signer" data-i18n="user_not_found">[user id not found]</span>{{/signer_uid_known}}</div>{{/sigs}}</div></details></div>{{/is_uat}}{{/other_uids}}</div>
   </div>
 </div>{{/keys}}
 <script>
