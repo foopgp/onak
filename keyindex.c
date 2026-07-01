@@ -905,6 +905,54 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 	tmpl_map_set(m, "revoked", tmpl_bool(key->revoked));
 
 	/*
+	 * When the whole key is revoked, walk the key's own sigs list
+	 * for the first key-revocation sig (v3 sigtype at data[2],
+	 * v4/v5 at data[1]) — same detection pattern as parsekey.c
+	 * that set key->revoked — and pull its creation time as the
+	 * revocation date. The template pairs it with the REVOKED
+	 * badge so a visitor sees not just "revoked" but "since when".
+	 */
+	tmpl_map_set(m, "has_revoked_date", tmpl_bool(false));
+	if (key->revoked) {
+		struct openpgp_packet_list *s;
+		time_t revtime = 0;
+		bool is_rev;
+		for (s = key->sigs; s != NULL; s = s->next) {
+			if (s->packet == NULL || s->packet->data == NULL ||
+					s->packet->length < 2) {
+				continue;
+			}
+			is_rev = false;
+			if (s->packet->data[0] == 3 &&
+					s->packet->length >= 3 &&
+					s->packet->data[2] ==
+						OPENPGP_SIGTYPE_KEY_REV) {
+				is_rev = true;
+			} else if ((s->packet->data[0] == 4 ||
+					s->packet->data[0] == 5) &&
+					s->packet->data[1] ==
+						OPENPGP_SIGTYPE_KEY_REV) {
+				is_rev = true;
+			}
+			if (is_rev) {
+				(void) sig_info(s->packet, NULL, &revtime);
+				break;
+			}
+		}
+		if (revtime > 0) {
+			struct tm rev_tm;
+			gmtime_r(&revtime, &rev_tm);
+			tmpl_map_set(m, "has_revoked_date", tmpl_bool(true));
+			tmpl_map_set(m, "revoked_str_iso",
+				tmpl_string_take(
+					strdup_printf("%04d-%02d-%02d",
+						rev_tm.tm_year + 1900,
+						rev_tm.tm_mon + 1,
+						rev_tm.tm_mday)));
+		}
+	}
+
+	/*
 	 * Pick the primary UID that goes in the pub-line slot. Walk
 	 * past any revoked UIDs (and skip UAT packets that may sit in
 	 * the same list) so the pub-line always carries a usable
