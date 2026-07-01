@@ -310,14 +310,18 @@ int clean_key_signatures(struct onak_dbctx *dbctx,
 /*
  * Cap the number of UIDs / UATs we accept on a key. Defends against
  * keys carrying an absurd number of (potentially forged) packets — the
- * 2019 SKS-style poisoning vector. Semantic is FIFO: we keep the last
- * N of each kind and drop the oldest excess. Since a UID/UAT packet
- * only survives further cleaning when it carries a valid self-sig,
- * only the key holder can ever push new UID/UATs anyway — FIFO lets
- * that holder keep evolving the active face of their certificate
- * (rotate an old alias out, add a fresh one in) once the cap is hit,
- * where a keep-oldest cap would ossify the certificate at whatever
- * was first published.
+ * 2019 SKS-style poisoning vector. Semantic is FIFO: we keep the
+ * newest N and drop the oldest excess. (The list is chronologically
+ * ordered by merge.c's append-at-tail, so newest sits at the tail
+ * and oldest sits at the head — but the *reason* we chose this
+ * direction is temporal, not positional.)
+ *
+ * Since a UID/UAT packet only survives further cleaning when it
+ * carries a valid self-sig, only the key holder can ever push new
+ * UID/UAT anyway — FIFO lets that holder keep evolving the active
+ * face of their certificate (rotate an old alias out, add a fresh
+ * one in) once the cap is hit. A keep-oldest cap would ossify the
+ * certificate at whatever was published first.
  */
 #define MAX_UIDS_PER_KEY	32
 #define MAX_UATS_PER_KEY	4
@@ -329,7 +333,7 @@ static int cap_packet_type(struct openpgp_publickey *key,
 	struct openpgp_signedpacket_list *tmp;
 	unsigned int                      total = 0;
 	unsigned int                      to_drop;
-	unsigned int                      dropped_head = 0;
+	unsigned int                      dropped_oldest = 0;
 	int                               dropped = 0;
 
 	log_assert(key != NULL);
@@ -344,11 +348,11 @@ static int cap_packet_type(struct openpgp_publickey *key,
 		return 0;
 	}
 	to_drop = total - max;
-	/* Pass 2: drop the first `to_drop` matching packets — head of
-	 * the list, which under merge.c's append-at-tail is the oldest
-	 * batch we saw. Surviving suffix is the newest max packets. */
+	/* Pass 2: drop the oldest `to_drop` matching packets — those
+	 * sit at the head of the list under merge.c's append-at-tail.
+	 * The surviving suffix is the newest `max`. */
 	curuid = &key->uids;
-	while (*curuid != NULL && dropped_head < to_drop) {
+	while (*curuid != NULL && dropped_oldest < to_drop) {
 		if ((*curuid)->packet->tag == tag) {
 			logthing(LOGTHING_INFO,
 				"Dropping packet of type %d "
@@ -358,7 +362,7 @@ static int cap_packet_type(struct openpgp_publickey *key,
 			*curuid = (*curuid)->next;
 			tmp->next = NULL;
 			free_signedpacket_list(tmp);
-			dropped_head++;
+			dropped_oldest++;
 			dropped++;
 		} else {
 			curuid = &(*curuid)->next;
@@ -425,11 +429,20 @@ int clean_large_packets(struct openpgp_publickey *key)
 
 /*
  * Cap the number of signatures attached to each UID/UAT-tagged packet.
- * Drops the tail of the sig list once @max have been kept; merge.c
- * appends incoming sigs at the tail, so on a subsequent flood the
- * surviving signatures are the older entries already known to this
- * server. On a first import the list order is dictated by the
- * submitting client, but the cap still bounds the damage.
+ * Semantic is stack (LIFO drop): we keep the oldest N and drop the
+ * newest excess. Sigs are certifications by third parties (unlike
+ * UID/UAT packets, which only the key holder can produce validly),
+ * so on a flood the desirable survivors are the historical WoT
+ * links this server has known the longest — not the latest arrivals
+ * that may include the flood itself. dedup_sigs_per_signer(), which
+ * runs before this cap, has already collapsed same-signer duplicates
+ * (newest cert wins, first revocation wins), so the cap only bites
+ * when @max distinct signers have signed one UID/UAT.
+ *
+ * (The list is chronologically ordered by merge.c's append-at-tail,
+ * so oldest sits at the head and newest at the tail. We walk from
+ * the head keeping the first @max entries, then free the tail —
+ * temporally: keep oldest, drop newest.)
  *
  * Pass @max == 0 to leave the packet untouched. Walks both UIDs and
  * UATs; pass OPENPGP_PACKET_UID or OPENPGP_PACKET_UAT in @tag to
