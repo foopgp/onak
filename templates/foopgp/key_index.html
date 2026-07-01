@@ -12,11 +12,13 @@
  with zero JS; we open it by default in op=vindex (verbose) and
  leave it closed in op=index. In op=index revoked UIDs+UATs are
  filtered out C-side; op=vindex shows them for experts, dimmed,
- and the UID row picks up a small "revoked" badge. A top-right language selector (EN/FR/DE/ES/IT/UK/PL, matching the
- landing page) drives the same STRINGS table below; sessionStorage
- key `onak-lang` is shared with the landing selector so a choice
- made on either surface follows the visitor. Falls back to EN if
- the locale is unknown or JS is disabled. CAVEAT: this comment
+ and the UID row picks up a small "revoked" badge. Inline JS localises the static labels against navigator.language
+ (EN/FR/DE/ES/IT/UK/PL); falls back to EN if the locale is unknown
+ or JS is disabled. No visible language selector — one lives on
+ the landing page and that is enough exposure. The empty state
+ ("Key not found.") is kept prefixed with ❌ in every language so
+ a visitor whose browser locale differs from their real reading
+ language still gets the message across. CAVEAT: this comment
  block must not contain the two consecutive close-mustache chars;
  the naive parser closes the comment on the first such occurrence.
 }}<style>
@@ -93,21 +95,6 @@
 .fp-signer                       { color: var(--dim); margin-left: .4em; }
 .fp-empty                        { padding: 1em; color: var(--muted); }
 
-/* Language selector, top-right of the result list. Same shape and
- * behaviour as the landing page selector (7 langs, sessionStorage-
- * shared under the `onak-lang` key). appearance:none pins our own
- * caret at the right edge — otherwise Chromium sizes the widget for
- * its widest option (Українська) and floats the native arrow in the
- * middle when a shorter one (Français) is showing. */
-.fp-langbar                      { display: flex; justify-content: flex-end; margin: 0 0 .5em 0; }
-#fp-lang-select                  { appearance: none; -webkit-appearance: none;
-                                   padding: .2em 1.6em .2em .6em;
-                                   font-size: .85em; height: auto; margin: 0;
-                                   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23444' d='M0 0l5 6 5-6z'/></svg>");
-                                   background-repeat: no-repeat;
-                                   background-position: right .5em center;
-                                   background-size: .6em; }
-
 /* Portrait phones: stack the UAT above the UIDs (full-width photo,
  * full-width identifiers) and let the SHA-1 fingerprint wrap at the
  * spaces between its 4-hex groups. Font sizes are left to the browser
@@ -119,18 +106,7 @@
   .fp-fp      { letter-spacing: 0; word-spacing: .2em; word-break: keep-all; overflow-wrap: break-word; }
 }
 </style>
-<div class="fp-langbar">
-  <select id="fp-lang-select" title="Language">
-    <option value="en">🇬🇧 English</option>
-    <option value="fr">🇫🇷 Français</option>
-    <option value="de">🇩🇪 Deutsch</option>
-    <option value="es">🇪🇸 Español</option>
-    <option value="it">🇮🇹 Italiano</option>
-    <option value="uk">🇺🇦 Українська</option>
-    <option value="pl">🇵🇱 Polski</option>
-  </select>
-</div>
-{{^keys}}<p class="fp-empty" data-i18n="no_result">Key not found.</p>{{/keys}}
+{{^keys}}<p class="fp-empty" data-i18n="no_result">❌ Key not found.</p>{{/keys}}
 {{#keys}}<div class="fp-card">
   <div class="fp-uat-col">{{#other_uids}}{{#is_uat}}<img class="fp-uat-img{{#revoked}} rev{{/revoked}}" src="lookup?op=photo&search=0x{{fingerprint_hex_full}}&idx={{uat_index}}" alt="" loading="lazy"{{#revoked}} data-i18n-tooltip="revoked"{{/revoked}}>{{/is_uat}}{{/other_uids}}</div>
   <div class="fp-uid-col">
@@ -142,37 +118,20 @@
 <script>
 (function () {
   var STRINGS = {
-    en: { download: "Download", download_tooltip: "Download this OpenPGP certificate", fingerprint_tooltip: "Check that this fingerprint matches the one printed on the holder's card or shown in person", keyid_tooltip: "Click for the public listing of this key", date_tooltip: "Date the certificate was issued", algo_tooltip: "Public-key algorithm and curve (or bit length)", expires: "expires", expires_tooltip: "Date after which this certificate should no longer be used", expired: "expired", expired_tooltip: "This certificate has expired and should no longer be used", no_expiry: "no expiration set", no_expiry_tooltip: "This certificate has no expiration date. Setting one is a recommended practice — please tell the holder.", signatures: "signatures", sig_toggle_tooltip: "Click to show or hide the signatures on this UID", user_not_found: "[user id not found]", no_result: "Key not found.", revoked: "REVOKED" },
-    fr: { download: "Télécharger", download_tooltip: "Télécharger ce certificat OpenPGP", fingerprint_tooltip: "Vérifiez que cette empreinte correspond à celle imprimée sur la carte ou présentée par le détenteur", keyid_tooltip: "Voir la fiche publique de cette clé", date_tooltip: "Date d'émission du certificat", algo_tooltip: "Algorithme de clé publique et courbe (ou nombre de bits)", expires: "expire le", expires_tooltip: "Date au-delà de laquelle ce certificat ne devrait plus être utilisé", expired: "expiré le", expired_tooltip: "Ce certificat a expiré et ne devrait plus être utilisé", no_expiry: "expiration non définie", no_expiry_tooltip: "Ce certificat n'a pas de date d'expiration. En définir une est une bonne pratique — pensez à le dire à son porteur.", signatures: "signatures", sig_toggle_tooltip: "Cliquez pour afficher ou masquer les signatures de cet UID", user_not_found: "[utilisateur inconnu]", no_result: "Clé introuvable.", revoked: "RÉVOQUÉ" },
-    de: { download: "Herunterladen", download_tooltip: "Dieses OpenPGP-Zertifikat herunterladen", fingerprint_tooltip: "Prüfen Sie, ob dieser Fingerabdruck mit dem auf der Karte oder vom Inhaber gezeigten übereinstimmt", keyid_tooltip: "Öffentlichen Eintrag dieses Schlüssels anzeigen", date_tooltip: "Ausstellungsdatum des Zertifikats", algo_tooltip: "Public-Key-Algorithmus und Kurve (oder Bitlänge)", expires: "läuft ab am", expires_tooltip: "Datum, nach dem dieses Zertifikat nicht mehr verwendet werden sollte", expired: "abgelaufen am", expired_tooltip: "Dieses Zertifikat ist abgelaufen und sollte nicht mehr verwendet werden", no_expiry: "kein Ablaufdatum gesetzt", no_expiry_tooltip: "Dieses Zertifikat hat kein Ablaufdatum. Eines zu setzen ist empfohlen — bitte sagen Sie es dem Inhaber.", signatures: "Signaturen", sig_toggle_tooltip: "Klicken, um die Signaturen dieses UID ein- oder auszublenden", user_not_found: "[Benutzer unbekannt]", no_result: "Schlüssel nicht gefunden.", revoked: "WIDERRUFEN" },
-    es: { download: "Descargar", download_tooltip: "Descargar este certificado OpenPGP", fingerprint_tooltip: "Compruebe que esta huella coincide con la impresa en la tarjeta o presentada por el titular", keyid_tooltip: "Ver la ficha pública de esta clave", date_tooltip: "Fecha de emisión del certificado", algo_tooltip: "Algoritmo de clave pública y curva (o número de bits)", expires: "expira el", expires_tooltip: "Fecha tras la cual este certificado ya no debería usarse", expired: "expiró el", expired_tooltip: "Este certificado ha expirado y ya no debería usarse", no_expiry: "expiración no definida", no_expiry_tooltip: "Este certificado no tiene fecha de expiración. Definirla es una buena práctica — por favor, dígaselo al titular.", signatures: "firmas", sig_toggle_tooltip: "Haga clic para mostrar u ocultar las firmas de este UID", user_not_found: "[usuario desconocido]", no_result: "Clave no encontrada.", revoked: "REVOCADA" },
-    it: { download: "Scarica", download_tooltip: "Scarica questo certificato OpenPGP", fingerprint_tooltip: "Verifica che questa impronta corrisponda a quella stampata sulla tessera o mostrata dal titolare", keyid_tooltip: "Vedi la scheda pubblica di questa chiave", date_tooltip: "Data di emissione del certificato", algo_tooltip: "Algoritmo a chiave pubblica e curva (o numero di bit)", expires: "scade il", expires_tooltip: "Data oltre la quale questo certificato non dovrebbe più essere usato", expired: "scaduto il", expired_tooltip: "Questo certificato è scaduto e non dovrebbe più essere usato", no_expiry: "scadenza non definita", no_expiry_tooltip: "Questo certificato non ha una data di scadenza. Definirla è una buona pratica — per favore, dillo al titolare.", signatures: "firme", sig_toggle_tooltip: "Clicca per mostrare o nascondere le firme di questo UID", user_not_found: "[utente sconosciuto]", no_result: "Chiave non trovata.", revoked: "REVOCATA" },
-    uk: { download: "Завантажити", download_tooltip: "Завантажити цей сертифікат OpenPGP", fingerprint_tooltip: "Перевірте, що цей відбиток збігається з тим, який надрукований на картці власника або показаний особисто", keyid_tooltip: "Клацніть, щоб переглянути публічну сторінку цього ключа", date_tooltip: "Дата видачі сертифіката", algo_tooltip: "Алгоритм відкритого ключа та крива (або довжина в бітах)", expires: "діє до", expires_tooltip: "Дата, після якої цей сертифікат не слід більше використовувати", expired: "сплив", expired_tooltip: "Цей сертифікат сплив і не повинен більше використовуватися", no_expiry: "термін дії не визначено", no_expiry_tooltip: "Цей сертифікат не має дати закінчення дії. Встановити її — рекомендована практика, повідомте про це власнику.", signatures: "підписи", sig_toggle_tooltip: "Клацніть, щоб показати або приховати підписи цього UID", user_not_found: "[користувача не знайдено]", no_result: "Ключ не знайдено.", revoked: "ВІДКЛИКАНО" },
-    pl: { download: "Pobierz", download_tooltip: "Pobierz ten certyfikat OpenPGP", fingerprint_tooltip: "Sprawdź, czy ten odcisk zgadza się z tym wydrukowanym na karcie lub okazanym przez posiadacza", keyid_tooltip: "Kliknij, aby zobaczyć publiczną stronę tego klucza", date_tooltip: "Data wystawienia certyfikatu", algo_tooltip: "Algorytm klucza publicznego i krzywa (lub długość w bitach)", expires: "wygasa", expires_tooltip: "Data, po której tego certyfikatu nie należy już używać", expired: "wygasł", expired_tooltip: "Ten certyfikat wygasł i nie powinien być już używany", no_expiry: "brak daty wygaśnięcia", no_expiry_tooltip: "Ten certyfikat nie ma daty wygaśnięcia. Jej ustawienie to zalecana praktyka — proszę poinformuj o tym posiadacza.", signatures: "podpisy", sig_toggle_tooltip: "Kliknij, aby pokazać lub ukryć podpisy tego UID", user_not_found: "[użytkownik nieznany]", no_result: "Klucz nie znaleziony.", revoked: "ODWOŁANO" }
+    en: { download: "Download", download_tooltip: "Download this OpenPGP certificate", fingerprint_tooltip: "Check that this fingerprint matches the one printed on the holder's card or shown in person", keyid_tooltip: "Click for the public listing of this key", date_tooltip: "Date the certificate was issued", algo_tooltip: "Public-key algorithm and curve (or bit length)", expires: "expires", expires_tooltip: "Date after which this certificate should no longer be used", expired: "expired", expired_tooltip: "This certificate has expired and should no longer be used", no_expiry: "no expiration set", no_expiry_tooltip: "This certificate has no expiration date. Setting one is a recommended practice — please tell the holder.", signatures: "signatures", sig_toggle_tooltip: "Click to show or hide the signatures on this UID", user_not_found: "[user id not found]", no_result: "❌ Key not found.", revoked: "REVOKED" },
+    fr: { download: "Télécharger", download_tooltip: "Télécharger ce certificat OpenPGP", fingerprint_tooltip: "Vérifiez que cette empreinte correspond à celle imprimée sur la carte ou présentée par le détenteur", keyid_tooltip: "Voir la fiche publique de cette clé", date_tooltip: "Date d'émission du certificat", algo_tooltip: "Algorithme de clé publique et courbe (ou nombre de bits)", expires: "expire le", expires_tooltip: "Date au-delà de laquelle ce certificat ne devrait plus être utilisé", expired: "expiré le", expired_tooltip: "Ce certificat a expiré et ne devrait plus être utilisé", no_expiry: "expiration non définie", no_expiry_tooltip: "Ce certificat n'a pas de date d'expiration. En définir une est une bonne pratique — pensez à le dire à son porteur.", signatures: "signatures", sig_toggle_tooltip: "Cliquez pour afficher ou masquer les signatures de cet UID", user_not_found: "[utilisateur inconnu]", no_result: "❌ Clé introuvable.", revoked: "RÉVOQUÉ" },
+    de: { download: "Herunterladen", download_tooltip: "Dieses OpenPGP-Zertifikat herunterladen", fingerprint_tooltip: "Prüfen Sie, ob dieser Fingerabdruck mit dem auf der Karte oder vom Inhaber gezeigten übereinstimmt", keyid_tooltip: "Öffentlichen Eintrag dieses Schlüssels anzeigen", date_tooltip: "Ausstellungsdatum des Zertifikats", algo_tooltip: "Public-Key-Algorithmus und Kurve (oder Bitlänge)", expires: "läuft ab am", expires_tooltip: "Datum, nach dem dieses Zertifikat nicht mehr verwendet werden sollte", expired: "abgelaufen am", expired_tooltip: "Dieses Zertifikat ist abgelaufen und sollte nicht mehr verwendet werden", no_expiry: "kein Ablaufdatum gesetzt", no_expiry_tooltip: "Dieses Zertifikat hat kein Ablaufdatum. Eines zu setzen ist empfohlen — bitte sagen Sie es dem Inhaber.", signatures: "Signaturen", sig_toggle_tooltip: "Klicken, um die Signaturen dieses UID ein- oder auszublenden", user_not_found: "[Benutzer unbekannt]", no_result: "❌ Schlüssel nicht gefunden.", revoked: "WIDERRUFEN" },
+    es: { download: "Descargar", download_tooltip: "Descargar este certificado OpenPGP", fingerprint_tooltip: "Compruebe que esta huella coincide con la impresa en la tarjeta o presentada por el titular", keyid_tooltip: "Ver la ficha pública de esta clave", date_tooltip: "Fecha de emisión del certificado", algo_tooltip: "Algoritmo de clave pública y curva (o número de bits)", expires: "expira el", expires_tooltip: "Fecha tras la cual este certificado ya no debería usarse", expired: "expiró el", expired_tooltip: "Este certificado ha expirado y ya no debería usarse", no_expiry: "expiración no definida", no_expiry_tooltip: "Este certificado no tiene fecha de expiración. Definirla es una buena práctica — por favor, dígaselo al titular.", signatures: "firmas", sig_toggle_tooltip: "Haga clic para mostrar u ocultar las firmas de este UID", user_not_found: "[usuario desconocido]", no_result: "❌ Clave no encontrada.", revoked: "REVOCADA" },
+    it: { download: "Scarica", download_tooltip: "Scarica questo certificato OpenPGP", fingerprint_tooltip: "Verifica che questa impronta corrisponda a quella stampata sulla tessera o mostrata dal titolare", keyid_tooltip: "Vedi la scheda pubblica di questa chiave", date_tooltip: "Data di emissione del certificato", algo_tooltip: "Algoritmo a chiave pubblica e curva (o numero di bit)", expires: "scade il", expires_tooltip: "Data oltre la quale questo certificato non dovrebbe più essere usato", expired: "scaduto il", expired_tooltip: "Questo certificato è scaduto e non dovrebbe più essere usato", no_expiry: "scadenza non definita", no_expiry_tooltip: "Questo certificato non ha una data di scadenza. Definirla è una buona pratica — per favore, dillo al titolare.", signatures: "firme", sig_toggle_tooltip: "Clicca per mostrare o nascondere le firme di questo UID", user_not_found: "[utente sconosciuto]", no_result: "❌ Chiave non trovata.", revoked: "REVOCATA" },
+    uk: { download: "Завантажити", download_tooltip: "Завантажити цей сертифікат OpenPGP", fingerprint_tooltip: "Перевірте, що цей відбиток збігається з тим, який надрукований на картці власника або показаний особисто", keyid_tooltip: "Клацніть, щоб переглянути публічну сторінку цього ключа", date_tooltip: "Дата видачі сертифіката", algo_tooltip: "Алгоритм відкритого ключа та крива (або довжина в бітах)", expires: "діє до", expires_tooltip: "Дата, після якої цей сертифікат не слід більше використовувати", expired: "сплив", expired_tooltip: "Цей сертифікат сплив і не повинен більше використовуватися", no_expiry: "термін дії не визначено", no_expiry_tooltip: "Цей сертифікат не має дати закінчення дії. Встановити її — рекомендована практика, повідомте про це власнику.", signatures: "підписи", sig_toggle_tooltip: "Клацніть, щоб показати або приховати підписи цього UID", user_not_found: "[користувача не знайдено]", no_result: "❌ Ключ не знайдено.", revoked: "ВІДКЛИКАНО" },
+    pl: { download: "Pobierz", download_tooltip: "Pobierz ten certyfikat OpenPGP", fingerprint_tooltip: "Sprawdź, czy ten odcisk zgadza się z tym wydrukowanym na karcie lub okazanym przez posiadacza", keyid_tooltip: "Kliknij, aby zobaczyć publiczną stronę tego klucza", date_tooltip: "Data wystawienia certyfikatu", algo_tooltip: "Algorytm klucza publicznego i krzywa (lub długość w bitach)", expires: "wygasa", expires_tooltip: "Data, po której tego certyfikatu nie należy już używać", expired: "wygasł", expired_tooltip: "Ten certyfikat wygasł i nie powinien być już używany", no_expiry: "brak daty wygaśnięcia", no_expiry_tooltip: "Ten certyfikat nie ma daty wygaśnięcia. Jej ustawienie to zalecana praktyka — proszę poinformuj o tym posiadacza.", signatures: "podpisy", sig_toggle_tooltip: "Kliknij, aby pokazać lub ukryć podpisy tego UID", user_not_found: "[użytkownik nieznany]", no_result: "❌ Klucz nie znaleziony.", revoked: "ODWOŁANO" }
   };
-  function pickLang() {
-    var stored = null;
-    try { stored = sessionStorage.getItem("onak-lang"); } catch (e) {}
-    if (stored && STRINGS[stored]) return stored;
-    var nav = (navigator.language || "en").slice(0, 2).toLowerCase();
-    return STRINGS[nav] ? nav : "en";
-  }
-  function apply(lang) {
-    var dict = STRINGS[lang] || STRINGS.en;
-    document.documentElement.setAttribute("lang", lang);
-    var nodes = document.querySelectorAll("[data-i18n]");
-    for (var i = 0; i < nodes.length; i++) { var k = nodes[i].getAttribute("data-i18n"); if (dict[k]) nodes[i].textContent = dict[k]; }
-    nodes = document.querySelectorAll("[data-i18n-tooltip]");
-    for (var j = 0; j < nodes.length; j++) { var t = nodes[j].getAttribute("data-i18n-tooltip"); if (dict[t]) nodes[j].setAttribute("title", dict[t]); }
-  }
-  var sel = document.getElementById("fp-lang-select");
-  var lang = pickLang();
-  if (sel) sel.value = lang;
-  apply(lang);
-  if (sel) sel.addEventListener("change", function () {
-    var L = sel.value;
-    try { sessionStorage.setItem("onak-lang", L); } catch (e) {}
-    apply(L);
-  });
+  var lang = (navigator.language || "en").slice(0, 2).toLowerCase();
+  var dict = STRINGS[lang] || STRINGS.en;
+  document.documentElement.setAttribute("lang", STRINGS[lang] ? lang : "en");
+  var nodes = document.querySelectorAll("[data-i18n]");
+  for (var i = 0; i < nodes.length; i++) { var k = nodes[i].getAttribute("data-i18n"); if (dict[k]) nodes[i].textContent = dict[k]; }
+  nodes = document.querySelectorAll("[data-i18n-tooltip]");
+  for (var j = 0; j < nodes.length; j++) { var t = nodes[j].getAttribute("data-i18n-tooltip"); if (dict[t]) nodes[j].setAttribute("title", dict[t]); }
 })();
 </script>

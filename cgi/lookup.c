@@ -77,7 +77,15 @@ void find_keys(struct onak_dbctx *dbctx,
 		if (mrhkp) {
 			puts("info:1:0");
 		} else {
-			puts("Key not found.");
+			/*
+			 * Route the empty state through the template so the
+			 * foopgp flavour can localise "Key not found." across
+			 * the same navigator.language table it uses for the
+			 * rest of the page, and both flavours can prefix an
+			 * ❌ emoji that reads as "not found" regardless of
+			 * the visitor's real reading language.
+			 */
+			key_index(dbctx, NULL, verbose, dispfp, skshash, true);
 		}
 	} else {
 		if (mrhkp) {
