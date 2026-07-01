@@ -12,12 +12,13 @@
  with zero JS; we open it by default in op=vindex (verbose) and
  leave it closed in op=index. In op=index revoked UIDs+UATs are
  filtered out C-side; op=vindex shows them for experts, dimmed,
- and the UID row picks up a small "revoked" badge. Inline JS only
- swaps the static labels against an EN/FR/DE table picked from
- navigator.language; falls back to EN if the locale is unknown or
- JS is disabled. CAVEAT: this comment block must not contain the
- two consecutive close-mustache chars; the naive parser closes
- the comment on the first such occurrence.
+ and the UID row picks up a small "revoked" badge. A top-right language selector (EN/FR/DE/ES/IT/UK/PL, matching the
+ landing page) drives the same STRINGS table below; sessionStorage
+ key `onak-lang` is shared with the landing selector so a choice
+ made on either surface follows the visitor. Falls back to EN if
+ the locale is unknown or JS is disabled. CAVEAT: this comment
+ block must not contain the two consecutive close-mustache chars;
+ the naive parser closes the comment on the first such occurrence.
 }}<style>
 :root {
   --brand:  #1976D2;
@@ -92,6 +93,21 @@
 .fp-signer                       { color: var(--dim); margin-left: .4em; }
 .fp-empty                        { padding: 1em; color: var(--muted); }
 
+/* Language selector, top-right of the result list. Same shape and
+ * behaviour as the landing page selector (7 langs, sessionStorage-
+ * shared under the `onak-lang` key). appearance:none pins our own
+ * caret at the right edge — otherwise Chromium sizes the widget for
+ * its widest option (Українська) and floats the native arrow in the
+ * middle when a shorter one (Français) is showing. */
+.fp-langbar                      { display: flex; justify-content: flex-end; margin: 0 0 .5em 0; }
+#fp-lang-select                  { appearance: none; -webkit-appearance: none;
+                                   padding: .2em 1.6em .2em .6em;
+                                   font-size: .85em; height: auto; margin: 0;
+                                   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23444' d='M0 0l5 6 5-6z'/></svg>");
+                                   background-repeat: no-repeat;
+                                   background-position: right .5em center;
+                                   background-size: .6em; }
+
 /* Portrait phones: stack the UAT above the UIDs (full-width photo,
  * full-width identifiers) and let the SHA-1 fingerprint wrap at the
  * spaces between its 4-hex groups. Font sizes are left to the browser
@@ -103,6 +119,17 @@
   .fp-fp      { letter-spacing: 0; word-spacing: .2em; word-break: keep-all; overflow-wrap: break-word; }
 }
 </style>
+<div class="fp-langbar">
+  <select id="fp-lang-select" title="Language">
+    <option value="en">🇬🇧 English</option>
+    <option value="fr">🇫🇷 Français</option>
+    <option value="de">🇩🇪 Deutsch</option>
+    <option value="es">🇪🇸 Español</option>
+    <option value="it">🇮🇹 Italiano</option>
+    <option value="uk">🇺🇦 Українська</option>
+    <option value="pl">🇵🇱 Polski</option>
+  </select>
+</div>
 {{^keys}}<p class="fp-empty" data-i18n="no_result">Key not found.</p>{{/keys}}
 {{#keys}}<div class="fp-card">
   <div class="fp-uat-col">{{#other_uids}}{{#is_uat}}<img class="fp-uat-img{{#revoked}} rev{{/revoked}}" src="lookup?op=photo&search=0x{{fingerprint_hex_full}}&idx={{uat_index}}" alt="" loading="lazy"{{#revoked}} data-i18n-tooltip="revoked"{{/revoked}}>{{/is_uat}}{{/other_uids}}</div>
@@ -123,11 +150,29 @@
     uk: { download: "Завантажити", download_tooltip: "Завантажити цей сертифікат OpenPGP", fingerprint_tooltip: "Перевірте, що цей відбиток збігається з тим, який надрукований на картці власника або показаний особисто", keyid_tooltip: "Клацніть, щоб переглянути публічну сторінку цього ключа", date_tooltip: "Дата видачі сертифіката", algo_tooltip: "Алгоритм відкритого ключа та крива (або довжина в бітах)", expires: "діє до", expires_tooltip: "Дата, після якої цей сертифікат не слід більше використовувати", expired: "сплив", expired_tooltip: "Цей сертифікат сплив і не повинен більше використовуватися", no_expiry: "термін дії не визначено", no_expiry_tooltip: "Цей сертифікат не має дати закінчення дії. Встановити її — рекомендована практика, повідомте про це власнику.", signatures: "підписи", sig_toggle_tooltip: "Клацніть, щоб показати або приховати підписи цього UID", user_not_found: "[користувача не знайдено]", no_result: "Ключ не знайдено.", revoked: "ВІДКЛИКАНО" },
     pl: { download: "Pobierz", download_tooltip: "Pobierz ten certyfikat OpenPGP", fingerprint_tooltip: "Sprawdź, czy ten odcisk zgadza się z tym wydrukowanym na karcie lub okazanym przez posiadacza", keyid_tooltip: "Kliknij, aby zobaczyć publiczną stronę tego klucza", date_tooltip: "Data wystawienia certyfikatu", algo_tooltip: "Algorytm klucza publicznego i krzywa (lub długość w bitach)", expires: "wygasa", expires_tooltip: "Data, po której tego certyfikatu nie należy już używać", expired: "wygasł", expired_tooltip: "Ten certyfikat wygasł i nie powinien być już używany", no_expiry: "brak daty wygaśnięcia", no_expiry_tooltip: "Ten certyfikat nie ma daty wygaśnięcia. Jej ustawienie to zalecana praktyka — proszę poinformuj o tym posiadacza.", signatures: "podpisy", sig_toggle_tooltip: "Kliknij, aby pokazać lub ukryć podpisy tego UID", user_not_found: "[użytkownik nieznany]", no_result: "Klucz nie znaleziony.", revoked: "ODWOŁANO" }
   };
-  var lang = (navigator.language || "en").slice(0, 2).toLowerCase();
-  var dict = STRINGS[lang] || STRINGS.en;
-  var nodes = document.querySelectorAll("[data-i18n]");
-  for (var i = 0; i < nodes.length; i++) { var k = nodes[i].getAttribute("data-i18n"); if (dict[k]) nodes[i].textContent = dict[k]; }
-  nodes = document.querySelectorAll("[data-i18n-tooltip]");
-  for (var j = 0; j < nodes.length; j++) { var t = nodes[j].getAttribute("data-i18n-tooltip"); if (dict[t]) nodes[j].setAttribute("title", dict[t]); }
+  function pickLang() {
+    var stored = null;
+    try { stored = sessionStorage.getItem("onak-lang"); } catch (e) {}
+    if (stored && STRINGS[stored]) return stored;
+    var nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+    return STRINGS[nav] ? nav : "en";
+  }
+  function apply(lang) {
+    var dict = STRINGS[lang] || STRINGS.en;
+    document.documentElement.setAttribute("lang", lang);
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) { var k = nodes[i].getAttribute("data-i18n"); if (dict[k]) nodes[i].textContent = dict[k]; }
+    nodes = document.querySelectorAll("[data-i18n-tooltip]");
+    for (var j = 0; j < nodes.length; j++) { var t = nodes[j].getAttribute("data-i18n-tooltip"); if (dict[t]) nodes[j].setAttribute("title", dict[t]); }
+  }
+  var sel = document.getElementById("fp-lang-select");
+  var lang = pickLang();
+  if (sel) sel.value = lang;
+  apply(lang);
+  if (sel) sel.addEventListener("change", function () {
+    var L = sel.value;
+    try { sessionStorage.setItem("onak-lang", L); } catch (e) {}
+    apply(L);
+  });
 })();
 </script>
