@@ -1,3 +1,13 @@
+onak-foopgp (0.6.5.foopgp8-1) unstable; urgency=medium
+
+  [ Mnème ]
+  * cleankey: FIFO semantic on UID/UAT caps — drop the oldest excess
+  * doc/html_lookup: drop the native dropdown caret on the lang selector
+  * cgi/lookup: serve op=get/op=hget as a downloadable .asc
+  * templates/foopgp: 📋 Copy button — fetch ARMORED, write to clipboard
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Thu, 02 Jul 2026 10:41:09 +0200
+
 onak-foopgp (0.6.5.foopgp7-1) unstable; urgency=medium
 
   [ Mnème ]
