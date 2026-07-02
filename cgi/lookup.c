@@ -220,17 +220,33 @@ int main(int argc, char *argv[])
 		params = NULL;
 	}
 
+	/*
+	 * op=get / op=hget response is served as a downloadable .asc file
+	 * (application/pgp-keys, Content-Disposition: attachment) rather
+	 * than inline HTML — a mobile visitor can then hand the file off
+	 * to OpenKeychain, GPG Keychain, Kleopatra, etc. via the OS'
+	 * usual "open with" dance. Headers are deferred to the fetch
+	 * branch below so we can put the actual key fingerprint into the
+	 * filename. HKP-protocol clients (gpg --recv-keys) are unaffected
+	 * — they never parsed Content-Disposition and now finally see the
+	 * spec-compliant Content-Type instead of text/html.
+	 */
+	bool is_download = (op == OP_GET || op == OP_HGET);
+
 	if (mrhkp) {
 		puts("Content-Type: text/plain\n");
 	} else if (op == OP_PHOTO) {
 		puts("Content-Type: image/jpeg\n");
-	} else {
+	} else if (!is_download) {
 		start_html("Lookup of key");
 	}
 
 	if (op == OP_UNKNOWN) {
 		puts("Error: No operation supplied.");
 	} else if (search == NULL) {
+		if (is_download) {
+			puts("Content-Type: text/plain\n");
+		}
 		puts("Error: No key to search for supplied.");
 	} else {
 		readconfig(NULL);
@@ -240,6 +256,10 @@ int main(int argc, char *argv[])
 		if (dbctx == NULL) {
 			logthing(LOGTHING_ERROR,
 				"Failed to open key database.");
+			if (is_download) {
+				puts("Content-Type: text/plain\n");
+				puts("Key database unavailable");
+			}
 			goto err;
 		}
 		switch (op) {
@@ -261,11 +281,43 @@ int main(int argc, char *argv[])
 					&publickey);
 			}
 			if (result) {
+				struct openpgp_fingerprint got_fp;
+				char fpbuf[65];
+				int fi;
 				logthing(LOGTHING_NOTICE,
 					"Found %d key(s) for search %s",
 					result,
 					search);
-				puts("<pre>");
+				/*
+				 * Emit the download headers now, using the
+				 * fetched key's own fingerprint as filename.
+				 * If get_fingerprint ever fails on an
+				 * in-memory key (shouldn't happen), fall
+				 * back to a plain Content-Type with no
+				 * attachment name.
+				 */
+				if (get_fingerprint(publickey->publickey,
+						&got_fp) == ONAK_E_OK) {
+					for (fi = 0; fi < got_fp.length;
+							fi++) {
+						snprintf(fpbuf + fi * 2,
+							sizeof(fpbuf) -
+								fi * 2,
+							"%02X",
+							got_fp.fp[fi]);
+					}
+					fpbuf[got_fp.length * 2] = '\0';
+					printf("Content-Type: "
+						"application/pgp-keys\n"
+						"Content-Disposition: "
+						"attachment; "
+						"filename=\"0x%s.asc\""
+						"\n\n",
+						fpbuf);
+				} else {
+					puts("Content-Type: "
+						"application/pgp-keys\n");
+				}
 				cleankeys(dbctx, &publickey,
 						config.clean_policies);
 				flatten_publickey(publickey,
@@ -274,11 +326,11 @@ int main(int argc, char *argv[])
 				armor_openpgp_stream(stdout_putchar,
 						NULL,
 						packets);
-				puts("</pre>");
 			} else {
 				logthing(LOGTHING_NOTICE,
 					"Failed to find key for search %s",
 					search);
+				puts("Content-Type: text/plain\n");
 				puts("Key not found");
 			}
 			break;
@@ -332,7 +384,7 @@ err:
 		}
 		cleanupconfig();
 	}
-	if (!mrhkp) {
+	if (!mrhkp && !is_download) {
 		puts("<hr>");
 		puts(" &mdash; onak " ONAK_VERSION " &mdash;");
 		if (contact_copy != NULL) {
