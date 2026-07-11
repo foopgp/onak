@@ -148,6 +148,25 @@ Everything runs in your browser — nothing is uploaded.</p>
 
   function b64(u8) { var s = ""; for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
 
+  // Minimal cert for the inline KEY: drop UserAttribute (the photo goes to PHOTO) and
+  // third-party signatures. Filter by NUMERIC packet tag — class names are mangled in
+  // the minified OpenPGP.js build, so constructor.name is unreliable ; constructor.tag
+  // (the OpenPGP packet type number) is stable.
+  function minimalCert(key) {
+    var E = openpgp.enums.packet, prime = key.getKeyID().toHex();
+    var min = new openpgp.PacketList();
+    key.toPacketList().forEach(function (p) {
+      var tag = p.constructor.tag;
+      if (tag === E.userAttribute) return;
+      if (tag === E.signature) {
+        var kid = p.issuerKeyID && p.issuerKeyID.toHex ? p.issuerKeyID.toHex() : "";
+        if (kid && kid !== prime) return;
+      }
+      min.push(p);
+    });
+    return min.write();
+  }
+
   var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)/;
 
   // Extract the JPEG(s) from a UserAttribute packet's opaque subpackets.
@@ -186,14 +205,25 @@ Everything runs in your browser — nothing is uploaded.</p>
     // properties
     var props = [["fn", fn], ["kind", "individual"]];
     // UID only with exactly one OpenPGP-ID (unless --check-eid demands it strictly)
-    if (eidList.length === 1) props.push(["uid", "openpgp:" + eidList[0]]);
+    if (eidList.length === 1) props.push(["uid", "urn:eid:" + eidList[0].replace("=", ":")]);
     else if (eidList.length === 0) warns.push({ t: checkeid ? "err" : "warn", m: t("m_noeid").replace("%f", label) });
     else warns.push({ t: checkeid ? "err" : "warn", m: t("m_multieid").replace("%f", label).replace("%n", eidList.length) });
     emails.forEach(function (e, i) { props.push(["email", e, i + 1]); });
 
-    // KEY inline (full cert base64 — v1 does NOT yet minimise / strip UAT ; TODO)
-    var certB64 = b64(key.toPacketList().write());
-    props.push(["key", "data:application/pgp-keys;base64," + certB64]);
+    // KEY inline: minimised cert (no UAT, no third-party sigs). The photo, if any,
+    // goes to PHOTO below — no duplication.
+    props.push(["key", "data:application/pgp-keys;base64," + b64(minimalCert(key))]);
+
+    // KEY server link: the retrievable cert, emitted only when reachable (HTTP 200).
+    // Cross-origin needs CORS on the keyserver ; degrades gracefully (skipped) when
+    // offline or served off-site. NOTE: op=get returns the key (matches
+    // MEDIATYPE=application/pgp-keys) ; op=index would return an HTML page instead.
+    try {
+      var ksUrl = "https://keys.foopgp.org/pks/lookup?op=get&search=0x" + key.getFingerprint();
+      var ctrl = new AbortController(); setTimeout(function () { ctrl.abort(); }, 4000);
+      var resp = await fetch(ksUrl, { signal: ctrl.signal });
+      if (resp.ok) props.push(["keyserver", ksUrl]);
+    } catch (e) { /* offline / CORS / 404 → skip */ }
 
     // PHOTO from non-revoked UAT
     key.users.filter(function (u) { return u.userAttribute && !isRevokedUser(u); }).forEach(function (u) {
@@ -207,7 +237,8 @@ Everything runs in your browser — nothing is uploaded.</p>
     props.forEach(function (p) {
       var name = p[0].toUpperCase();
       if (p[0] === "email" && p[2]) name = "EMAIL;PREF=" + p[2];
-      if (p[0] === "key" || p[0] === "photo") lines.push(vLineRaw(name, p[1]));   // data: value, don't escape
+      if (p[0] === "keyserver") lines.push(vLineRaw("KEY;MEDIATYPE=application/pgp-keys", p[1]));
+      else if (p[0] === "key" || p[0] === "photo") lines.push(vLineRaw(name, p[1]));   // data: value, don't escape
       else lines.push(vLine(name, p[1]));
     });
     lines.push("END:VCARD");
@@ -217,6 +248,7 @@ Everything runs in your browser — nothing is uploaded.</p>
     props.forEach(function (p) {
       if (p[0] === "email" && p[2]) jc[1].push(["email", { pref: String(p[2]) }, "text", p[1]]);
       else if (p[0] === "uid") jc[1].push(["uid", {}, "uri", p[1]]);
+      else if (p[0] === "keyserver") jc[1].push(["key", { mediatype: "application/pgp-keys" }, "uri", p[1]]);
       else if (p[0] === "key" || p[0] === "photo") jc[1].push([p[0], {}, "uri", p[1]]);
       else if (p[0] === "kind") jc[1].push(["kind", {}, "text", p[1]]);
       else jc[1].push([p[0], {}, "text", p[1]]);
