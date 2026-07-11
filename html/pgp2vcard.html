@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<!-- Milligram CSS via the Debian package libjs-milligram (Suggests).
+     The /javascript/ alias is provided by the javascript-common package. -->
+<link rel="stylesheet" href="/javascript/milligram/milligram.min.css">
+<!-- OpenPGP.js is vendored (no Debian package exists, unlike libjs-milligram).
+     v6.3.1, LGPL, browser UMD global build (window.openpgp). -->
+<script src="openpgp.min.js"></script>
+<style>
+  body          { font-size: 1.5em; line-height: 1.5; }
+  h1            { font-size: 2.6rem; margin-bottom: 1rem; }
+  h2            { font-size: 1.9rem; margin-top: 2rem; margin-bottom: .8rem; }
+  form          { margin-bottom: 1.5rem; }
+  .container    { max-width: 90rem; padding: 0 2rem; }
+  #certtext, #vcfout { min-height: 10rem; font-family: monospace; font-size: .8em; white-space: pre; }
+  .lang-bar     { display: flex; justify-content: flex-end; padding-top: .5rem; }
+  #lang-select  { appearance: none; -webkit-appearance: none;
+                  width: auto; padding: .2rem .6rem; font-size: .85rem; height: auto; margin: 0; }
+  .msg          { padding: .4rem .8rem; border-radius: 3px; margin: .3rem 0; font-size: .85em; }
+  .msg-warn     { background: #fff3cd; }
+  .msg-err      { background: #f8d7da; }
+  .msg-ok       { background: #d4edda; }
+  .row-btns     { display: flex; gap: 1rem; flex-wrap: wrap; }
+  @media (min-width: 1200px) { .container { max-width: 110rem; } }
+  @media (max-width: 600px)  { body { font-size: 1.4em; } h1 { font-size: 2.2rem; } h2 { font-size: 1.7rem; } .container { padding: 0 1rem; } }
+</style>
+<title data-i18n="page_title">OpenPGP certificate → vCard</title>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="lang-bar">
+    <select id="lang-select" title="Language">
+      <option value="en">🇬🇧 English</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="it">🇮🇹 Italiano</option>
+      <option value="uk">🇺🇦 Українська</option>
+      <option value="pl">🇵🇱 Polski</option>
+    </select>
+  </div>
+
+  <h1><a href="https://github.com/foopgp/onak">Onak-foopgp</a> <span data-i18n="h1_suffix">certificate → vCard</span></h1>
+
+  <p data-i18n="intro">Paste or drop one or more OpenPGP certificates ; get a vCard 4.0 (or jCard) back.
+Everything runs in your browser — nothing is uploaded.</p>
+
+  <h2 data-i18n="h2_input">OpenPGP certificate(s)</h2>
+  <textarea id="certtext" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----
+...
+-----END PGP PUBLIC KEY BLOCK-----"></textarea>
+
+  <p>
+    <label for="certfile" data-i18n="label_file">…or load a file (binary or .asc):</label>
+    <input type="file" id="certfile" accept=".asc,.gpg,.pgp,.pub,application/pgp-keys">
+  </p>
+
+  <p>
+    <input type="checkbox" id="checkeid">
+    <label for="checkeid" data-i18n="label_checkeid">Require a consistent OpenPGP-ID (else legacy: best-effort)</label><br>
+    <input type="checkbox" id="jcard">
+    <label for="jcard" data-i18n="label_jcard">Output jCard (JSON, RFC 7095) instead of vCard</label>
+  </p>
+
+  <button class="button-primary" id="convert" data-i18n="btn_convert">Convert</button>
+
+  <div id="messages"></div>
+
+  <h2 data-i18n="h2_output">Result</h2>
+  <textarea id="vcfout" readonly></textarea>
+  <div class="row-btns">
+    <button class="button" id="download" data-i18n="btn_download">⬇️  Download</button>
+    <button class="button button-clear" id="copy" data-i18n="btn_copy">📋 Copy</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---- i18n (en/fr complete ; other langs fall back to en) ------------- */
+  var STRINGS = {
+    en: { page_title: "OpenPGP certificate → vCard", h1_suffix: "certificate → vCard",
+      intro: "Paste or drop one or more OpenPGP certificates ; get a vCard 4.0 (or jCard) back. Everything runs in your browser — nothing is uploaded.",
+      h2_input: "OpenPGP certificate(s)", label_file: "…or load a file (binary or .asc):",
+      label_checkeid: "Require a consistent OpenPGP-ID (else legacy: best-effort)",
+      label_jcard: "Output jCard (JSON, RFC 7095) instead of vCard",
+      btn_convert: "Convert", h2_output: "Result", btn_download: "⬇️  Download", btn_copy: "📋 Copy",
+      m_empty: "Paste a certificate or load a file first.", m_parse: "Could not read any OpenPGP certificate.",
+      m_done: "Generated %n vCard(s).", m_noeid: "%f: no OpenPGP-ID found — UID omitted.",
+      m_multieid: "%f: several OpenPGP-IDs (%n) — UID omitted.", m_noemail: "%f: no usable e-mail on a presentable uid.",
+      m_copied: "✅ Copied!", m_copyerr: "❌ Copy failed." },
+    fr: { page_title: "Certificat OpenPGP → vCard", h1_suffix: "certificat → vCard",
+      intro: "Collez ou déposez un ou plusieurs certificats OpenPGP ; récupérez une vCard 4.0 (ou jCard). Tout se passe dans votre navigateur — rien n'est envoyé.",
+      h2_input: "Certificat(s) OpenPGP", label_file: "…ou chargez un fichier (binaire ou .asc) :",
+      label_checkeid: "Exiger un OpenPGP-ID cohérent (sinon legacy : au mieux)",
+      label_jcard: "Sortir du jCard (JSON, RFC 7095) au lieu du vCard",
+      btn_convert: "Convertir", h2_output: "Résultat", btn_download: "⬇️  Télécharger", btn_copy: "📋 Copier",
+      m_empty: "Collez d'abord un certificat ou chargez un fichier.", m_parse: "Aucun certificat OpenPGP lisible.",
+      m_done: "%n vCard(s) générée(s).", m_noeid: "%f : aucun OpenPGP-ID trouvé — UID omis.",
+      m_multieid: "%f : plusieurs OpenPGP-ID (%n) — UID omis.", m_noemail: "%f : aucun e-mail exploitable sur un uid présentable.",
+      m_copied: "✅ Copié !", m_copyerr: "❌ Échec de la copie." }
+  };
+  function t(k) { var d = STRINGS[LANG] || STRINGS.en; return d[k] || STRINGS.en[k] || k; }
+
+  function pickLang() {
+    var s = null; try { s = sessionStorage.getItem("onak-lang"); } catch (e) {}
+    if (s && STRINGS[s]) return s;
+    var n = (navigator.language || "en").slice(0, 2).toLowerCase();
+    return STRINGS[n] ? n : "en";
+  }
+  function applyI18n() {
+    var d = STRINGS[LANG] || STRINGS.en;
+    document.documentElement.setAttribute("lang", LANG);
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      var k = el.getAttribute("data-i18n"); if (!d[k] && !STRINGS.en[k]) return;
+      var v = d[k] || STRINGS.en[k];
+      if (el.tagName === "TITLE") document.title = v; else el.textContent = v;
+    });
+  }
+  var LANG = pickLang();
+  var sel = document.getElementById("lang-select");
+  sel.value = LANG; applyI18n();
+  sel.addEventListener("change", function () {
+    LANG = sel.value; try { sessionStorage.setItem("onak-lang", LANG); } catch (e) {}
+    applyI18n();
+  });
+
+  /* ---- vCard helpers (hand-rolled RFC 6350) ---------------------------- */
+  function vEsc(s) { return String(s).replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;"); }
+  // Fold a content line at 75 chars (base64 is ASCII → char == octet ; short
+  // text lines rarely fold). Unfolding restores the exact octets (RFC 6350 §3.2).
+  function vFold(line) {
+    if (line.length <= 75) return line;
+    var out = line.slice(0, 75), i = 75;
+    while (i < line.length) { out += "\r\n " + line.slice(i, i + 74); i += 74; }
+    return out;
+  }
+  function vLine(name, value) { return vFold(name + ":" + vEsc(value)); }
+  function vLineRaw(name, value) { return vFold(name + ":" + value); }  // value already escaped/opaque (data:)
+
+  function b64(u8) { var s = ""; for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
+
+  var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)/;
+
+  // Extract the JPEG(s) from a UserAttribute packet's opaque subpackets.
+  // Subpacket body = [type 0x01][image header 16 o][JPEG]. OpenPGP.js keeps the
+  // subpackets as latin1 strings in userAttribute.attributes (verified in node).
+  function uatJpegs(userAttr) {
+    var out = [];
+    (userAttr.attributes || []).forEach(function (sp) {
+      if (sp.charCodeAt(0) !== 1) return;            // 1 = image attribute
+      var jpeg = sp.slice(1 + 16);                   // strip type + 16-byte image header
+      var u8 = new Uint8Array(jpeg.length);
+      for (var i = 0; i < jpeg.length; i++) u8[i] = jpeg.charCodeAt(i) & 0xff;
+      if (u8[0] === 0xff && u8[1] === 0xd8) out.push(u8);   // SOI marker sanity
+    });
+    return out;
+  }
+
+  function isRevokedUser(u) { return !!(u.revocationSignatures && u.revocationSignatures.length); }
+
+  // Build one vCard (array-of-lines) from an openpgp Key. Returns {lines, warns, jcard}.
+  async function keyToVcard(key, label, checkeid) {
+    var warns = [];
+    var uids = key.users.filter(function (u) { return u.userID && !isRevokedUser(u); });
+    var names = [], emails = [], eids = {};
+    uids.forEach(function (u) {
+      var id = u.userID;
+      if (id.name) names.push(id.name);
+      if (id.email) emails.push(id.email);
+      var m = EID_RE.exec(id.userID || "");
+      if (m) eids["u" + m[1] + "=" + m[2]] = true;
+    });
+    var eidList = Object.keys(eids);
+    var fn = names[0] || (emails[0] ? emails[0].split("@")[0] : label);
+    if (!emails.length) warns.push({ t: "warn", m: t("m_noemail").replace("%f", label) });
+
+    // properties
+    var props = [["fn", fn], ["kind", "individual"]];
+    // UID only with exactly one OpenPGP-ID (unless --check-eid demands it strictly)
+    if (eidList.length === 1) props.push(["uid", "openpgp:" + eidList[0]]);
+    else if (eidList.length === 0) warns.push({ t: checkeid ? "err" : "warn", m: t("m_noeid").replace("%f", label) });
+    else warns.push({ t: checkeid ? "err" : "warn", m: t("m_multieid").replace("%f", label).replace("%n", eidList.length) });
+    emails.forEach(function (e, i) { props.push(["email", e, i + 1]); });
+
+    // KEY inline (full cert base64 — v1 does NOT yet minimise / strip UAT ; TODO)
+    var certB64 = b64(key.toPacketList().write());
+    props.push(["key", "data:application/pgp-keys;base64," + certB64]);
+
+    // PHOTO from non-revoked UAT
+    key.users.filter(function (u) { return u.userAttribute && !isRevokedUser(u); }).forEach(function (u) {
+      uatJpegs(u.userAttribute).forEach(function (jpeg) {
+        props.push(["photo", "data:image/jpeg;base64," + b64(jpeg)]);
+      });
+    });
+
+    // vCard text
+    var lines = ["BEGIN:VCARD", "VERSION:4.0"];
+    props.forEach(function (p) {
+      var name = p[0].toUpperCase();
+      if (p[0] === "email" && p[2]) name = "EMAIL;PREF=" + p[2];
+      if (p[0] === "key" || p[0] === "photo") lines.push(vLineRaw(name, p[1]));   // data: value, don't escape
+      else lines.push(vLine(name, p[1]));
+    });
+    lines.push("END:VCARD");
+
+    // jCard (RFC 7095)
+    var jc = ["vcard", [["version", {}, "text", "4.0"]]];
+    props.forEach(function (p) {
+      if (p[0] === "email" && p[2]) jc[1].push(["email", { pref: String(p[2]) }, "text", p[1]]);
+      else if (p[0] === "uid") jc[1].push(["uid", {}, "uri", p[1]]);
+      else if (p[0] === "key" || p[0] === "photo") jc[1].push([p[0], {}, "uri", p[1]]);
+      else if (p[0] === "kind") jc[1].push(["kind", {}, "text", p[1]]);
+      else jc[1].push([p[0], {}, "text", p[1]]);
+    });
+    return { lines: lines, warns: warns, jcard: jc };
+  }
+
+  /* ---- read certificate(s) from textarea or file ----------------------- */
+  async function readCerts() {
+    var f = document.getElementById("certfile").files[0];
+    if (f) {
+      var buf = new Uint8Array(await f.arrayBuffer());
+      var head = String.fromCharCode.apply(null, buf.slice(0, 30));
+      if (head.indexOf("-----BEGIN") >= 0)
+        return openpgp.readKeys({ armoredKeys: new TextDecoder().decode(buf) });
+      return openpgp.readKeys({ binaryKeys: buf });
+    }
+    var txt = document.getElementById("certtext").value.trim();
+    if (!txt) return null;
+    return openpgp.readKeys({ armoredKeys: txt });
+  }
+
+  /* ---- wire up --------------------------------------------------------- */
+  function showMsgs(msgs) {
+    var box = document.getElementById("messages"); box.innerHTML = "";
+    msgs.forEach(function (m) {
+      var d = document.createElement("div");
+      d.className = "msg msg-" + (m.t === "err" ? "err" : m.t === "ok" ? "ok" : "warn");
+      d.textContent = m.m; box.appendChild(d);
+    });
+  }
+
+  document.getElementById("convert").addEventListener("click", async function () {
+    var checkeid = document.getElementById("checkeid").checked;
+    var jcard = document.getElementById("jcard").checked;
+    var out = document.getElementById("vcfout");
+    var keys;
+    try { keys = await readCerts(); }
+    catch (e) { showMsgs([{ t: "err", m: t("m_parse") + " (" + e.message + ")" }]); return; }
+    if (!keys || !keys.length) { showMsgs([{ t: "err", m: t("m_empty") }]); return; }
+
+    var allWarns = [], cards = [], jcards = [];
+    for (var i = 0; i < keys.length; i++) {
+      var label = "0x" + keys[i].getFingerprint().slice(-16).toUpperCase();
+      var r = await keyToVcard(keys[i], label, checkeid);
+      allWarns = allWarns.concat(r.warns);
+      cards.push(r.lines.join("\r\n"));
+      jcards.push(r.jcard);
+    }
+    out.value = jcard ? JSON.stringify(jcards.length === 1 ? jcards[0] : jcards, null, 2)
+                      : cards.join("\r\n");
+    allWarns.push({ t: "ok", m: t("m_done").replace("%n", keys.length) });
+    showMsgs(allWarns);
+  });
+
+  document.getElementById("download").addEventListener("click", function () {
+    var jcard = document.getElementById("jcard").checked;
+    var blob = new Blob([document.getElementById("vcfout").value],
+      { type: jcard ? "application/json" : "text/vcard;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = jcard ? "contacts.json" : "contacts.vcf";
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById("copy").addEventListener("click", function () {
+    navigator.clipboard.writeText(document.getElementById("vcfout").value)
+      .then(function () { showMsgs([{ t: "ok", m: t("m_copied") }]); })
+      .catch(function () { showMsgs([{ t: "err", m: t("m_copyerr") }]); });
+  });
+})();
+</script>
+</body>
+</html>
