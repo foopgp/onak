@@ -7,6 +7,15 @@
 <!-- Milligram CSS via the Debian package libjs-milligram (Suggests).
      The /javascript/ alias is provided by the javascript-common package. -->
 <link rel="stylesheet" href="/javascript/milligram/milligram.min.css">
+<!-- OpenPGP.js v6 needs a secure context (WebCrypto crypto.subtle): over plain
+     http — e.g. the historic HKP port 11371 — its UMD throws at load ("The
+     WebCrypto API is not available") and `openpgp` never gets defined. Hop to
+     the standard https origin (same path + query) before fetching 400 kB for
+     nothing. localhost is a secure context, so local testing is unaffected. -->
+<script>
+if (!window.isSecureContext && location.protocol === "http:")
+  location.replace("https://" + location.hostname + location.pathname + location.search);
+</script>
 <!-- OpenPGP.js is vendored (no Debian package exists, unlike libjs-milligram).
      v6.3.1, LGPL, browser UMD global build (window.openpgp). -->
 <script src="openpgp.min.js"></script>
@@ -206,9 +215,24 @@ Everything runs in your browser — nothing is uploaded.</p>
     if (!emails.length) warns.push({ t: "warn", m: t("m_noemail").replace("%f", label) });
 
     // properties
-    var props = [["fn", fn], ["kind", "individual"]];
+    var props = [["fn", fn]];
     // UID only with exactly one OpenPGP-ID ; 0 or ≥2 → omitted (flagged red).
-    if (eidList.length === 1) props.push(["uid", "urn:eid:" + eidList[0].replace("=", ":")]);
+    // KIND and GEO are inferred from the eid variant: u4 is a human birth
+    // identity → KIND:individual ; u5 is "apparition of anything" → no KIND
+    // guess (the property is optional), but its coord14 suffix ("e" + lat +
+    // lon, "_" = positive / "-" = negative) yields a GEO. Signed vCard
+    // extensions carried in the UAT metadata (planned) will override these
+    // inferred properties.
+    if (eidList.length === 1) {
+      var eid = eidList[0];
+      props.push(["uid", "urn:eid:" + eid.replace("=", ":")]);
+      if (eid.slice(0, 2) === "u4") props.push(["kind", "individual"]);
+      else {
+        var g = /e([_-])([0-9]{2}\.[0-9]{2})([_-])([01][0-9]{2}\.[0-9]{2})$/.exec(eid);
+        if (g) props.push(["geo", "geo:" + (g[1] === "-" ? "-" : "") + Number(g[2]) +
+                                     "," + (g[3] === "-" ? "-" : "") + Number(g[4])]);
+      }
+    }
     else if (eidList.length === 0) warns.push({ t: "err", m: t("m_noeid").replace("%f", label) });
     else warns.push({ t: "err", m: t("m_multieid").replace("%f", label).replace("%n", eidList.length) });
     emails.forEach(function (e, i) { props.push(["email", e, i + 1]); });
@@ -241,7 +265,7 @@ Everything runs in your browser — nothing is uploaded.</p>
       var name = p[0].toUpperCase();
       if (p[0] === "email" && p[2]) name = "EMAIL;PREF=" + p[2];
       if (p[0] === "keyserver") lines.push(vLineRaw("KEY;MEDIATYPE=application/pgp-keys", p[1]));
-      else if (p[0] === "key" || p[0] === "photo") lines.push(vLineRaw(name, p[1]));   // data: value, don't escape
+      else if (p[0] === "key" || p[0] === "photo" || p[0] === "geo") lines.push(vLineRaw(name, p[1]));   // URI values (data:, geo:) — don't escape the comma
       else lines.push(vLine(name, p[1]));
     });
     lines.push("END:VCARD");
@@ -252,7 +276,7 @@ Everything runs in your browser — nothing is uploaded.</p>
       if (p[0] === "email" && p[2]) jc[1].push(["email", { pref: String(p[2]) }, "text", p[1]]);
       else if (p[0] === "uid") jc[1].push(["uid", {}, "uri", p[1]]);
       else if (p[0] === "keyserver") jc[1].push(["key", { mediatype: "application/pgp-keys" }, "uri", p[1]]);
-      else if (p[0] === "key" || p[0] === "photo") jc[1].push([p[0], {}, "uri", p[1]]);
+      else if (p[0] === "key" || p[0] === "photo" || p[0] === "geo") jc[1].push([p[0], {}, "uri", p[1]]);
       else if (p[0] === "kind") jc[1].push(["kind", {}, "text", p[1]]);
       else jc[1].push([p[0], {}, "text", p[1]]);
     });
