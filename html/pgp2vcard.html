@@ -62,8 +62,6 @@ Everything runs in your browser — nothing is uploaded.</p>
   </p>
 
   <p>
-    <input type="checkbox" id="checkeid">
-    <label for="checkeid" data-i18n="label_checkeid">Require a consistent OpenPGP-ID (else legacy: best-effort)</label><br>
     <input type="checkbox" id="jcard">
     <label for="jcard" data-i18n="label_jcard">Output jCard (JSON, RFC 7095) instead of vCard</label>
   </p>
@@ -87,26 +85,13 @@ Everything runs in your browser — nothing is uploaded.</p>
 
   /* ---- i18n (en/fr complete ; other langs fall back to en) ------------- */
   var STRINGS = {
-    en: { page_title: "OpenPGP certificate → vCard", h1_suffix: "certificate → vCard",
-      intro: "Paste or drop one or more OpenPGP certificates ; get a vCard 4.0 (or jCard) back. Everything runs in your browser — nothing is uploaded.",
-      h2_input: "OpenPGP certificate(s)", label_file: "…or load a file (binary or .asc):",
-      label_checkeid: "Require a consistent OpenPGP-ID (else legacy: best-effort)",
-      label_jcard: "Output jCard (JSON, RFC 7095) instead of vCard",
-      btn_convert: "Convert", h2_output: "Result", btn_download: "⬇️  Download", btn_copy: "📋 Copy",
-      m_empty: "Paste a certificate or load a file first.", m_parse: "Could not read any OpenPGP certificate.",
-      m_done: "Generated %n vCard(s).", m_noeid: "%f: no OpenPGP-ID found — UID omitted.",
-      m_multieid: "%f: several OpenPGP-IDs (%n) — UID omitted.", m_noemail: "%f: no usable e-mail on a presentable uid.",
-      m_copied: "✅ Copied!", m_copyerr: "❌ Copy failed." },
-    fr: { page_title: "Certificat OpenPGP → vCard", h1_suffix: "certificat → vCard",
-      intro: "Collez ou déposez un ou plusieurs certificats OpenPGP ; récupérez une vCard 4.0 (ou jCard). Tout se passe dans votre navigateur — rien n'est envoyé.",
-      h2_input: "Certificat(s) OpenPGP", label_file: "…ou chargez un fichier (binaire ou .asc) :",
-      label_checkeid: "Exiger un OpenPGP-ID cohérent (sinon legacy : au mieux)",
-      label_jcard: "Sortir du jCard (JSON, RFC 7095) au lieu du vCard",
-      btn_convert: "Convertir", h2_output: "Résultat", btn_download: "⬇️  Télécharger", btn_copy: "📋 Copier",
-      m_empty: "Collez d'abord un certificat ou chargez un fichier.", m_parse: "Aucun certificat OpenPGP lisible.",
-      m_done: "%n vCard(s) générée(s).", m_noeid: "%f : aucun OpenPGP-ID trouvé — UID omis.",
-      m_multieid: "%f : plusieurs OpenPGP-ID (%n) — UID omis.", m_noemail: "%f : aucun e-mail exploitable sur un uid présentable.",
-      m_copied: "✅ Copié !", m_copyerr: "❌ Échec de la copie." }
+    en: { page_title: "OpenPGP certificate → vCard", h1_suffix: "certificate → vCard", intro: "Paste or drop one or more OpenPGP certificates ; get a vCard 4.0 (or jCard) back. Everything runs in your browser — nothing is uploaded.", h2_input: "OpenPGP certificate(s)", label_file: "…or load a file (binary or .asc):", label_jcard: "Output jCard (JSON, RFC 7095) instead of vCard", btn_convert: "Convert", h2_output: "Result", btn_download: "⬇️  Download", btn_copy: "📋 Copy", m_empty: "Paste a certificate or load a file first.", m_parse: "Could not read any OpenPGP certificate.", m_done: "Generated %n vCard(s).", m_noeid: "%f: no entity identifier (EID) found ⇒ the contact card cannot be identified (no UID:urn:… property).", m_multieid: "%f: several entity identifiers (EID: %n) ⇒ the contact card cannot be identified (no UID:urn:… property).", m_noemail: "%f: no usable e-mail on a presentable uid.", m_copied: "✅ Copied!", m_copyerr: "❌ Copy failed." },
+    fr: { page_title: "Certificat OpenPGP → vCard", h1_suffix: "certificat → vCard", intro: "Collez ou déposez un ou plusieurs certificats OpenPGP ; récupérez une vCard 4.0 (ou jCard). Tout se passe dans votre navigateur — rien n'est envoyé.", h2_input: "Certificat(s) OpenPGP", label_file: "…ou chargez un fichier (binaire ou .asc) :", label_jcard: "Sortir du jCard (JSON, RFC 7095) au lieu du vCard", btn_convert: "Convertir", h2_output: "Résultat", btn_download: "⬇️  Télécharger", btn_copy: "📋 Copier", m_empty: "Collez d'abord un certificat ou chargez un fichier.", m_parse: "Aucun certificat OpenPGP lisible.", m_done: "%n vCard(s) générée(s).", m_noeid: "%f : aucun identifiant d'entité (EID) ⇒ la carte de visite ne pourra pas être identifiée (pas de propriété UID:urn:…).", m_multieid: "%f : plusieurs identifiants d'entité (EID : %n) ⇒ la carte de visite ne pourra pas être identifiée (pas de propriété UID:urn:…).", m_noemail: "%f : aucun e-mail exploitable sur un uid présentable.", m_copied: "✅ Copié !", m_copyerr: "❌ Échec de la copie." },
+    de: { page_title: "OpenPGP-Zertifikat → vCard", h1_suffix: "Zertifikat → vCard", intro: "Fügen Sie ein oder mehrere OpenPGP-Zertifikate ein ; erhalten Sie eine vCard 4.0 (oder jCard). Alles läuft in Ihrem Browser — nichts wird hochgeladen.", h2_input: "OpenPGP-Zertifikat(e)", label_file: "…oder eine Datei laden (binär oder .asc):", label_jcard: "jCard (JSON, RFC 7095) statt vCard ausgeben", btn_convert: "Umwandeln", h2_output: "Ergebnis", btn_download: "⬇️  Herunterladen", btn_copy: "📋 Kopieren", m_empty: "Fügen Sie zuerst ein Zertifikat ein oder laden Sie eine Datei.", m_parse: "Kein lesbares OpenPGP-Zertifikat.", m_done: "%n vCard(s) erzeugt.", m_noeid: "%f: keine Entitätskennung (EID) gefunden ⇒ die Kontaktkarte kann nicht identifiziert werden (keine UID:urn:…-Eigenschaft).", m_multieid: "%f: mehrere Entitätskennungen (EID: %n) ⇒ die Kontaktkarte kann nicht identifiziert werden (keine UID:urn:…-Eigenschaft).", m_noemail: "%f: keine brauchbare E-Mail an einer darstellbaren UID.", m_copied: "✅ Kopiert!", m_copyerr: "❌ Kopieren fehlgeschlagen." },
+    es: { page_title: "Certificado OpenPGP → vCard", h1_suffix: "certificado → vCard", intro: "Pegue o suelte uno o más certificados OpenPGP ; obtenga una vCard 4.0 (o jCard). Todo se ejecuta en su navegador — no se sube nada.", h2_input: "Certificado(s) OpenPGP", label_file: "…o cargue un archivo (binario o .asc):", label_jcard: "Generar jCard (JSON, RFC 7095) en lugar de vCard", btn_convert: "Convertir", h2_output: "Resultado", btn_download: "⬇️  Descargar", btn_copy: "📋 Copiar", m_empty: "Pegue primero un certificado o cargue un archivo.", m_parse: "Ningún certificado OpenPGP legible.", m_done: "%n vCard(s) generada(s).", m_noeid: "%f: ningún identificador de entidad (EID) ⇒ la tarjeta de contacto no podrá identificarse (sin propiedad UID:urn:…).", m_multieid: "%f: varios identificadores de entidad (EID: %n) ⇒ la tarjeta de contacto no podrá identificarse (sin propiedad UID:urn:…).", m_noemail: "%f: ningún correo utilizable en un uid presentable.", m_copied: "✅ ¡Copiado!", m_copyerr: "❌ Error al copiar." },
+    it: { page_title: "Certificato OpenPGP → vCard", h1_suffix: "certificato → vCard", intro: "Incolla o trascina uno o più certificati OpenPGP ; ottieni una vCard 4.0 (o jCard). Tutto avviene nel tuo browser — nulla viene caricato.", h2_input: "Certificato/i OpenPGP", label_file: "…oppure carica un file (binario o .asc):", label_jcard: "Genera jCard (JSON, RFC 7095) invece di vCard", btn_convert: "Converti", h2_output: "Risultato", btn_download: "⬇️  Scarica", btn_copy: "📋 Copia", m_empty: "Incolla prima un certificato o carica un file.", m_parse: "Nessun certificato OpenPGP leggibile.", m_done: "%n vCard generate.", m_noeid: "%f: nessun identificatore di entità (EID) ⇒ la scheda di contatto non potrà essere identificata (nessuna proprietà UID:urn:…).", m_multieid: "%f: più identificatori di entità (EID: %n) ⇒ la scheda di contatto non potrà essere identificata (nessuna proprietà UID:urn:…).", m_noemail: "%f: nessuna e-mail utilizzabile su un uid presentabile.", m_copied: "✅ Copiato!", m_copyerr: "❌ Copia non riuscita." },
+    uk: { page_title: "Сертифікат OpenPGP → vCard", h1_suffix: "сертифікат → vCard", intro: "Вставте або перетягніть один чи кілька сертифікатів OpenPGP ; отримайте vCard 4.0 (або jCard). Усе відбувається у вашому браузері — нічого не завантажується.", h2_input: "Сертифікат(и) OpenPGP", label_file: "…або завантажте файл (двійковий чи .asc):", label_jcard: "Вивести jCard (JSON, RFC 7095) замість vCard", btn_convert: "Перетворити", h2_output: "Результат", btn_download: "⬇️  Завантажити", btn_copy: "📋 Копіювати", m_empty: "Спершу вставте сертифікат або завантажте файл.", m_parse: "Немає придатного для читання сертифіката OpenPGP.", m_done: "Створено %n vCard.", m_noeid: "%f: не знайдено ідентифікатора сутності (EID) ⇒ контактну картку не вдасться ідентифікувати (немає властивості UID:urn:…).", m_multieid: "%f: кілька ідентифікаторів сутності (EID: %n) ⇒ контактну картку не вдасться ідентифікувати (немає властивості UID:urn:…).", m_noemail: "%f: немає придатної е-пошти на презентабельному uid.", m_copied: "✅ Скопійовано!", m_copyerr: "❌ Не вдалося скопіювати." },
+    pl: { page_title: "Certyfikat OpenPGP → vCard", h1_suffix: "certyfikat → vCard", intro: "Wklej lub upuść jeden lub więcej certyfikatów OpenPGP ; otrzymaj vCard 4.0 (lub jCard). Wszystko dzieje się w przeglądarce — nic nie jest wysyłane.", h2_input: "Certyfikat(y) OpenPGP", label_file: "…lub wczytaj plik (binarny lub .asc):", label_jcard: "Wygeneruj jCard (JSON, RFC 7095) zamiast vCard", btn_convert: "Konwertuj", h2_output: "Wynik", btn_download: "⬇️  Pobierz", btn_copy: "📋 Kopiuj", m_empty: "Najpierw wklej certyfikat lub wczytaj plik.", m_parse: "Brak czytelnego certyfikatu OpenPGP.", m_done: "Wygenerowano %n vCard.", m_noeid: "%f: nie znaleziono identyfikatora podmiotu (EID) ⇒ karty kontaktu nie da się zidentyfikować (brak właściwości UID:urn:…).", m_multieid: "%f: kilka identyfikatorów podmiotu (EID: %n) ⇒ karty kontaktu nie da się zidentyfikować (brak właściwości UID:urn:…).", m_noemail: "%f: brak użytecznego e-maila na prezentowalnym uid.", m_copied: "✅ Skopiowano!", m_copyerr: "❌ Kopiowanie nie powiodło się." }
   };
   function t(k) { var d = STRINGS[LANG] || STRINGS.en; return d[k] || STRINGS.en[k] || k; }
 
@@ -187,7 +172,7 @@ Everything runs in your browser — nothing is uploaded.</p>
   function isRevokedUser(u) { return !!(u.revocationSignatures && u.revocationSignatures.length); }
 
   // Build one vCard (array-of-lines) from an openpgp Key. Returns {lines, warns, jcard}.
-  async function keyToVcard(key, label, checkeid) {
+  async function keyToVcard(key, label) {
     var warns = [];
     var uids = key.users.filter(function (u) { return u.userID && !isRevokedUser(u); });
     var names = [], emails = [], eids = {};
@@ -204,10 +189,10 @@ Everything runs in your browser — nothing is uploaded.</p>
 
     // properties
     var props = [["fn", fn], ["kind", "individual"]];
-    // UID only with exactly one OpenPGP-ID (unless --check-eid demands it strictly)
+    // UID only with exactly one OpenPGP-ID ; 0 or ≥2 → omitted (flagged red).
     if (eidList.length === 1) props.push(["uid", "urn:eid:" + eidList[0].replace("=", ":")]);
-    else if (eidList.length === 0) warns.push({ t: checkeid ? "err" : "warn", m: t("m_noeid").replace("%f", label) });
-    else warns.push({ t: checkeid ? "err" : "warn", m: t("m_multieid").replace("%f", label).replace("%n", eidList.length) });
+    else if (eidList.length === 0) warns.push({ t: "err", m: t("m_noeid").replace("%f", label) });
+    else warns.push({ t: "err", m: t("m_multieid").replace("%f", label).replace("%n", eidList.length) });
     emails.forEach(function (e, i) { props.push(["email", e, i + 1]); });
 
     // KEY inline: minimised cert (no UAT, no third-party sigs). The photo, if any,
@@ -282,7 +267,6 @@ Everything runs in your browser — nothing is uploaded.</p>
   }
 
   document.getElementById("convert").addEventListener("click", async function () {
-    var checkeid = document.getElementById("checkeid").checked;
     var jcard = document.getElementById("jcard").checked;
     var out = document.getElementById("vcfout");
     var keys;
@@ -293,7 +277,7 @@ Everything runs in your browser — nothing is uploaded.</p>
     var allWarns = [], cards = [], jcards = [];
     for (var i = 0; i < keys.length; i++) {
       var label = "0x" + keys[i].getFingerprint().slice(-16).toUpperCase();
-      var r = await keyToVcard(keys[i], label, checkeid);
+      var r = await keyToVcard(keys[i], label);
       allWarns = allWarns.concat(r.warns);
       cards.push(r.lines.join("\r\n"));
       jcards.push(r.jcard);
@@ -319,6 +303,18 @@ Everything runs in your browser — nothing is uploaded.</p>
       .then(function () { showMsgs([{ t: "ok", m: t("m_copied") }]); })
       .catch(function () { showMsgs([{ t: "err", m: t("m_copyerr") }]); });
   });
+
+  /* ?src=<relative-cert-url> : the key_index.html "🪪 vCard" button lands here.
+   * Fetch the cert (same-origin, relative) into the textarea, then convert. */
+  (function () {
+    var src = new URLSearchParams(location.search).get("src");
+    if (!src) return;
+    fetch(src).then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+      .then(function (txt) {
+        document.getElementById("certtext").value = txt;
+        document.getElementById("convert").click();
+      }).catch(function () { showMsgs([{ t: "err", m: t("m_parse") }]); });
+  })();
 })();
 </script>
 </body>
