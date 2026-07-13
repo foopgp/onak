@@ -1,3 +1,12 @@
+onak-foopgp (0.6.5.foopgp10-1) unstable; urgency=medium
+
+  [ Mnème ]
+  * templates/foopgp: fix the 🪪 vCard link — root-absolute /pgp2vcard.html (no stray pks/ from /pks/lookup) + add the missing pks/ in src= so the page fetches /pks/lookup ; trim the 3 action buttons (gap/padding/font) to fit one row on most phones
+  * pgp2vcard: add a 🗑️ Clear button (empties the textarea AND the loaded file AND the previous result, 9 langs) ; fix the jCard checkbox rendering above its label under milligram (inline flex row)
+  * html: cross-link the two pages in a footer — index.html → 🪪 pgp2vcard.html and back → 🔑 key server home (i18n, 9 langs)
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Mon, 13 Jul 2026 16:08:22 +0200
+
 onak-foopgp (0.6.5.foopgp9-1) unstable; urgency=medium
 
   [ jjbrucker ]
