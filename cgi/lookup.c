@@ -233,6 +233,10 @@ int main(int argc, char *argv[])
 	 */
 	bool is_download = (op == OP_GET || op == OP_HGET);
 
+	/* Let in-browser tools (e.g. the vendored html/pgp2vcard.html) read our
+	 * responses cross-origin: everything served here is public key material. */
+	puts("Access-Control-Allow-Origin: *");
+
 	if (mrhkp) {
 		puts("Content-Type: text/plain\n");
 	} else if (op == OP_PHOTO) {
