@@ -1,3 +1,18 @@
+onak-foopgp (0.6.5.foopgp9-1) unstable; urgency=medium
+
+  [ jjbrucker ]
+  * templates/foopgp/: put download and copy buttons on their on line + split fingerprint in 2 lines for small screen (smartphones)
+
+  [ Mnème ]
+  * html: standalone pgp2vcard tool (OpenPGP cert → vCard 4.0 / jCard)
+  * pgp2vcard: UID urn:eid:u4:<value> (drop 'uetree') ; minimise the inline KEY (drop UAT + 3rd-party sigs, filter by numeric packet tag) ; add server KEY;MEDIATYPE link when the keyserver answers 200
+  * cgi/lookup: send Access-Control-Allow-Origin: * so in-browser tools (html/pgp2vcard.html) can read keyserver responses cross-origin (public key material)
+  * templates/foopgp: mailto only on the <email> part (client-side, XSS-safe DOM) ; 'signatures' → 'certifications' (7 langs) ; add 🪪 vCard button → pgp2vcard.html?src=…
+  * pgp2vcard: always require a consistent EID (drop the opt-in checkbox, red error when 0 or ≥2) ; clearer EID messages ; translate to all 7 onak-foopgp langs ; handle ?src= to auto-load the cert from the key_index vCard button
+  * i18n: add Portuguese (pt) and Russian (ru) to key_index template + index.html + pgp2vcard.html (STRINGS + language selector)
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Mon, 13 Jul 2026 14:21:09 +0200
+
 onak-foopgp (0.6.5.foopgp8-1) unstable; urgency=medium
 
   [ Mnème ]
