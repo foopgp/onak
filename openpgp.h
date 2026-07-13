@@ -81,6 +81,10 @@
 #define OPENPGP_PACKET_MDC		19
 #define OPENPGP_PACKET_COMMENT		61
 
+/* User Attribute subpacket types (RFC 9580 §5.12, Table 13 —
+ * 100-110 are reserved for private or experimental use) */
+#define OPENPGP_UAT_IMAGE		1
+
 #define OPENPGP_SIGTYPE_BINARY		0x00
 #define OPENPGP_SIGTYPE_TEXT		0x01
 #define OPENPGP_SIGTYPE_KEY_REV		0x20

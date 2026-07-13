@@ -34,6 +34,7 @@
 #include "log.h"
 #include "onak.h"
 #include "openpgp.h"
+#include "photoid.h"
 #include "template.h"
 
 /*
@@ -343,7 +344,16 @@ int list_uids(struct onak_dbctx *dbctx,
 			 * the browser fetch the wrong (typically: revoked)
 			 * photo blob for what is shown as the valid UAT.
 			 */
-			if (!verbose && signedpacket_is_revoked(uids)) {
+			if (uat_subpacket_type(uids->packet) !=
+					OPENPGP_UAT_IMAGE) {
+				/*
+				 * Not an image attribute (e.g. a private
+				 * range subtype): getphoto() would serve
+				 * nothing for this index, so emitting an
+				 * <img> would render broken. The stride
+				 * still advances below.
+				 */
+			} else if (!verbose && signedpacket_is_revoked(uids)) {
 				/* skip in op=index ; nothing to print */
 			} else {
 				printf("                                ");
@@ -695,6 +705,19 @@ static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 		 * browser fetches the wrong blob.
 		 */
 		this_idx = is_uat ? imgindx++ : 0;
+
+		if (is_uat && uat_subpacket_type(uids->packet) !=
+				OPENPGP_UAT_IMAGE) {
+			/*
+			 * A UAT whose first subpacket isn't an image
+			 * (e.g. a private range subtype) has nothing
+			 * op=photo can serve — emitting the entry would
+			 * render a broken <img>. imgindx has already
+			 * advanced above, keeping getphoto()'s stride.
+			 */
+			uids = uids->next;
+			continue;
+		}
 
 		revoked = signedpacket_is_revoked(uids);
 		if (!verbose && revoked) {
