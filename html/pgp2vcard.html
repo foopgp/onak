@@ -179,9 +179,10 @@ Everything runs in your browser — nothing is uploaded.</p>
     return min.write();
   }
 
-  // eid inside a uid — either the classic comment token "u4=VALUE" (also
-  // udid4=), or the vCard-property uid form "UID:urn:eid:u4:VALUE".
-  var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)|urn:eid:u([45]):([A-Za-z0-9_.+/\-]+)/;
+  // eid inside a uid — either the standard glued form "urn:eid:u4VALUE"
+  // (the ":?" also tolerates the deprecated "urn:eid:u4:VALUE"), or the
+  // deprecated comment token "u4=VALUE" (also udid4=).
+  var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)|urn:eid:u([45]):?([A-Za-z0-9_.+/\-]+)/;
 
   // Extract the JPEG(s) from a UserAttribute packet's opaque subpackets.
   // Subpacket body = [type 0x01][image header 16 o][JPEG]. OpenPGP.js keeps the
@@ -227,7 +228,7 @@ Everything runs in your browser — nothing is uploaded.</p>
     // inferred properties.
     if (eidList.length === 1) {
       var eid = eidList[0];
-      props.push(["uid", "urn:eid:" + eid.replace("=", ":")]);
+      props.push(["uid", "urn:eid:" + eid.replace("=", "")]);   // standard glued form: urn:eid:u4VALUE
       if (eid.slice(0, 2) === "u4") props.push(["kind", "individual"]);
       else {
         var g = /e([_-])([0-9]{2}\.[0-9]{2})([_-])([01][0-9]{2}\.[0-9]{2})$/.exec(eid);
