@@ -179,7 +179,9 @@ Everything runs in your browser — nothing is uploaded.</p>
     return min.write();
   }
 
-  var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)/;
+  // eid inside a uid — either the classic comment token "u4=VALUE" (also
+  // udid4=), or the vCard-property uid form "UID:urn:eid:u4:VALUE".
+  var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)|urn:eid:u([45]):([A-Za-z0-9_.+/\-]+)/;
 
   // Extract the JPEG(s) from a UserAttribute packet's opaque subpackets.
   // Subpacket body = [type 0x01][image header 16 o][JPEG]. OpenPGP.js keeps the
@@ -208,7 +210,7 @@ Everything runs in your browser — nothing is uploaded.</p>
       if (id.name) names.push(id.name);
       if (id.email) emails.push(id.email);
       var m = EID_RE.exec(id.userID || "");
-      if (m) eids["u" + m[1] + "=" + m[2]] = true;
+      if (m) eids["u" + (m[1] || m[3]) + "=" + (m[2] || m[4])] = true;
     });
     var eidList = Object.keys(eids);
     var fn = names[0] || (emails[0] ? emails[0].split("@")[0] : label);
