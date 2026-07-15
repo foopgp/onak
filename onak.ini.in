@@ -31,11 +31,10 @@ max_reply_keys=128
 ; as per draft-dkg-openpgp-abuse-resistant-keystore 4.1
 ;check_packet_size=false
 ; Cap the number of UIDs / UAT packets per key, dropping any beyond the
-; hardcoded limits (currently 32 UIDs, and 4 UATs per attribute subtype —
-; e.g. at most 4 image attributes plus 4 of each private-range subtype).
-; This defends against keys carrying an absurd number of identity
-; packets. Semantic is keep-newest: the oldest surplus is dropped, so
-; the key holder can keep rotating fresh packets in once the cap is hit.
+; hardcoded limits (currently 32 UIDs and 4 UATs). This defends against
+; keys carrying an absurd number of identity packets; the surviving ones
+; are those that appear first in the key, which after a merge are the
+; older entries already known to this server.
 cap_uids_per_key=true
 cap_uats_per_key=true
 ; Cap the number of signatures kept on each UID and each User Attribute

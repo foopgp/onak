@@ -29,7 +29,6 @@
 #include "merge.h"
 #include "onak-conf.h"
 #include "openpgp.h"
-#include "photoid.h"
 #include "sigcheck.h"
 
 /**
@@ -325,15 +324,7 @@ int clean_key_signatures(struct onak_dbctx *dbctx,
  * certificate at whatever was published first.
  */
 #define MAX_UIDS_PER_KEY	32
-/*
- * UATs are capped *per attribute subtype* — the type octet of the
- * packet's first subpacket (1 = image, 100-110 = private/experimental
- * use). Each subtype independently keeps its newest N, so a photo
- * flood cannot evict other attribute kinds carried by the key, and
- * vice versa. UATs whose first subpacket cannot be parsed share a
- * single "malformed" bucket, capped the same way.
- */
-#define MAX_UATS_PER_SUBTYPE	4
+#define MAX_UATS_PER_KEY	4
 
 static int cap_packet_type(struct openpgp_publickey *key,
 		int tag, unsigned int max)
@@ -388,56 +379,7 @@ int cap_uids_per_key(struct openpgp_publickey *key)
 
 int cap_uats_per_key(struct openpgp_publickey *key)
 {
-	struct openpgp_signedpacket_list **curuid;
-	struct openpgp_signedpacket_list *tmp;
-	unsigned int excess[257] = { 0 };	/* subtypes 0-255 + malformed */
-	unsigned int bucket;
-	int          subtype;
-	int          dropped = 0;
-
-	log_assert(key != NULL);
-	/* Pass 1: count UATs per subtype. */
-	for (curuid = &key->uids; *curuid != NULL;
-			curuid = &(*curuid)->next) {
-		if ((*curuid)->packet->tag == OPENPGP_PACKET_UAT) {
-			subtype = uat_subpacket_type((*curuid)->packet);
-			excess[subtype < 0 ? 256 : subtype]++;
-		}
-	}
-	/* Reduce each count to the overflow beyond the per-subtype cap. */
-	for (bucket = 0; bucket <= 256; bucket++) {
-		excess[bucket] = (excess[bucket] > MAX_UATS_PER_SUBTYPE) ?
-			excess[bucket] - MAX_UATS_PER_SUBTYPE : 0;
-	}
-	/* Pass 2: drop each subtype's oldest overflow — the oldest sit
-	 * at the head of the list under merge.c's append-at-tail, so
-	 * the surviving suffix is that subtype's newest N. */
-	curuid = &key->uids;
-	while (*curuid != NULL) {
-		if ((*curuid)->packet->tag != OPENPGP_PACKET_UAT) {
-			curuid = &(*curuid)->next;
-			continue;
-		}
-		subtype = uat_subpacket_type((*curuid)->packet);
-		bucket = subtype < 0 ? 256 : subtype;
-		if (excess[bucket] > 0) {
-			logthing(LOGTHING_INFO,
-				"Dropping UAT of subtype %d "
-				"beyond cap %u",
-				subtype,
-				(unsigned int) MAX_UATS_PER_SUBTYPE);
-			tmp = *curuid;
-			*curuid = (*curuid)->next;
-			tmp->next = NULL;
-			free_signedpacket_list(tmp);
-			excess[bucket]--;
-			dropped++;
-		} else {
-			curuid = &(*curuid)->next;
-		}
-	}
-
-	return dropped;
+	return cap_packet_type(key, OPENPGP_PACKET_UAT, MAX_UATS_PER_KEY);
 }
 
 int clean_large_packets(struct openpgp_publickey *key)

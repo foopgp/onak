@@ -36,16 +36,4 @@
 onak_status_t getphoto(struct openpgp_publickey *key, int index,
 		unsigned char **photo, size_t *length);
 
-/**
- * 	uat_subpacket_type - returns the subtype of a User Attribute packet.
- * 	@packet: The UAT packet to inspect.
- *
- * 	A User Attribute packet is a sequence of attribute subpackets; in
- * 	practice a packet is dedicated to a single attribute, so the type
- * 	octet of its first subpacket identifies what it carries (1 = image,
- * 	100-110 = private/experimental use). Returns that type octet, or -1
- * 	if the packet is empty or malformed.
- */
-int uat_subpacket_type(struct openpgp_packet *packet);
-
 #endif /* __PHOTOID_H__ */
