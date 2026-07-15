@@ -1,3 +1,12 @@
+onak-foopgp (0.6.5.foopgp11-1) unstable; urgency=medium
+
+  [ Mnème ]
+  * pgp2vcard: hop to the https origin when served from a non-secure context (historic HKP port 11371 — OpenPGP.js v6 UMD throws without crypto.subtle) ; KIND:individual only for a u4 eid, and for a u5 derive GEO from its coord14 suffix (signed vCard extensions in UAT metadata will later override both)
+  * pgp2vcard: EID_RE also recognizes the vCard-property uid form 'UID:urn:eid:u4:VALUE' (kept: classic 'u4=VALUE' comment token) — groundwork for the vCard-shaped uids experiment
+  * pgp2vcard: standard glued eid form — emit UID:urn:eid:u4VALUE (no separator, escape-proof by construction) and read it back (':?' keeps tolerating the deprecated urn:eid:u4:VALUE and u4= comment forms)
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Wed, 15 Jul 2026 11:30:15 +0200
+
 onak-foopgp (0.6.5.foopgp10-1) unstable; urgency=medium
 
   [ Mnème ]
