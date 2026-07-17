@@ -158,6 +158,18 @@ Everything runs in your browser — nothing is uploaded.</p>
   function vLine(name, value) { return vFold(name + ":" + vEsc(value)); }
   function vLineRaw(name, value) { return vFold(name + ":" + value); }  // value already escaped/opaque (data:)
 
+  // A vCard-property uid is already a complete vCard content line ; split it into
+  // the jCard quadruple [name, params, type, value] and un-escape the text value.
+  function vLineToJcard(line) {
+    var i = line.indexOf(":");
+    var head = line.slice(0, i).split(";"), value = line.slice(i + 1);
+    var name = head.shift().toLowerCase(), params = {};
+    head.forEach(function (kv) { var j = kv.indexOf("="); if (j > 0) params[kv.slice(0, j).toLowerCase()] = kv.slice(j + 1); });
+    var uri = /^[a-z][a-z0-9+.\-]*:/.test(value);
+    if (!uri) value = value.replace(/\\([\\,;n])/g, function (_, c) { return c === "n" ? "\n" : c; });
+    return [name, params, uri ? "uri" : "text", value];
+  }
+
   function b64(u8) { var s = ""; for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return btoa(s); }
 
   // Minimal cert for the inline KEY: drop UserAttribute (the photo goes to PHOTO) and
@@ -184,6 +196,12 @@ Everything runs in your browser — nothing is uploaded.</p>
   // deprecated comment token "u4=VALUE" (also udid4=).
   var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)|urn:eid:u([45]):?([A-Za-z0-9_.+/\-]+)/;
 
+  // A vCard-shaped uid: "PROP[;params]:[ ]value" (bl-pgpid property uids).
+  var PROP_RE = /^([A-Za-z][A-Za-z0-9-]*)((?:;[^:]*)?):[ ]?([\s\S]*)$/;
+  // Properties (beyond FN/EMAIL/UID, handled apart) carried through verbatim —
+  // the uid already IS a valid, escaped vCard content line.
+  var CARRY = { NOTE: 1, ADR: 1, TEL: 1, URL: 1, LANG: 1, GEO: 1, TITLE: 1, ROLE: 1, ORG: 1, NICKNAME: 1, BDAY: 1 };
+
   // Extract the JPEG(s) from a UserAttribute packet's opaque subpackets.
   // Subpacket body = [type 0x01][image header 16 o][JPEG]. OpenPGP.js keeps the
   // subpackets as latin1 strings in userAttribute.attributes (verified in node).
@@ -205,13 +223,20 @@ Everything runs in your browser — nothing is uploaded.</p>
   async function keyToVcard(key, label) {
     var warns = [];
     var uids = key.users.filter(function (u) { return u.userID && !isRevokedUser(u); });
-    var names = [], emails = [], eids = {};
+    var names = [], emails = [], eids = {}, extra = [];
     uids.forEach(function (u) {
-      var id = u.userID;
-      if (id.name) names.push(id.name);
-      if (id.email) emails.push(id.email);
-      var m = EID_RE.exec(id.userID || "");
+      var raw = u.userID.userID || "";
+      var m = EID_RE.exec(raw);                                  // eid may sit in any uid shape
       if (m) eids["u" + (m[1] || m[3]) + "=" + (m[2] || m[4])] = true;
+      // Route FN/EMAIL through the usual paths, carry the other known vCard
+      // properties through verbatim, else fall back to classic "Name <email>".
+      var pm = PROP_RE.exec(raw), P = pm ? pm[1].toUpperCase() : "";
+      if (P === "UID") return;                                   // the eid uid — captured above
+      if (P === "FN") { if (pm[3]) names.push(pm[3]); return; }
+      if (P === "EMAIL") { var e = pm[3].replace(/^<([\s\S]*)>$/, "$1").trim(); if (e) emails.push(e); return; }
+      if (CARRY[P]) { extra.push(P + pm[2] + ":" + pm[3]); return; }
+      if (u.userID.name) names.push(u.userID.name);
+      if (u.userID.email) emails.push(u.userID.email);
     });
     var eidList = Object.keys(eids);
     var fn = names[0] || (emails[0] ? emails[0].split("@")[0] : label);
@@ -239,6 +264,7 @@ Everything runs in your browser — nothing is uploaded.</p>
     else if (eidList.length === 0) warns.push({ t: "err", m: t("m_noeid").replace("%f", label) });
     else warns.push({ t: "err", m: t("m_multieid").replace("%f", label).replace("%n", eidList.length) });
     emails.forEach(function (e, i) { props.push(["email", e, i + 1]); });
+    extra.forEach(function (line) { props.push(["vcardline", line]); });   // NOTE/ADR/TEL/URL/LANG/GEO… carried from the cert
 
     // KEY inline: minimised cert (no UAT, no third-party sigs). The photo, if any,
     // goes to PHOTO below — no duplication.
@@ -268,6 +294,7 @@ Everything runs in your browser — nothing is uploaded.</p>
       var name = p[0].toUpperCase();
       if (p[0] === "email" && p[2]) name = "EMAIL;PREF=" + p[2];
       if (p[0] === "keyserver") lines.push(vLineRaw("KEY;MEDIATYPE=application/pgp-keys", p[1]));
+      else if (p[0] === "vcardline") lines.push(vFold(p[1]));   // already a complete, escaped vCard line
       else if (p[0] === "key" || p[0] === "photo" || p[0] === "geo") lines.push(vLineRaw(name, p[1]));   // URI values (data:, geo:) — don't escape the comma
       else lines.push(vLine(name, p[1]));
     });
@@ -277,6 +304,7 @@ Everything runs in your browser — nothing is uploaded.</p>
     var jc = ["vcard", [["version", {}, "text", "4.0"]]];
     props.forEach(function (p) {
       if (p[0] === "email" && p[2]) jc[1].push(["email", { pref: String(p[2]) }, "text", p[1]]);
+      else if (p[0] === "vcardline") jc[1].push(vLineToJcard(p[1]));
       else if (p[0] === "uid") jc[1].push(["uid", {}, "uri", p[1]]);
       else if (p[0] === "keyserver") jc[1].push(["key", { mediatype: "application/pgp-keys" }, "uri", p[1]]);
       else if (p[0] === "key" || p[0] === "photo" || p[0] === "geo") jc[1].push([p[0], {}, "uri", p[1]]);
