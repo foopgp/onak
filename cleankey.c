@@ -326,6 +326,68 @@ int clean_key_signatures(struct onak_dbctx *dbctx,
 #define MAX_UIDS_PER_KEY	32
 #define MAX_UATS_PER_KEY	4
 
+/*
+ * Does this UID/UAT carry a self-signature flagging it the primary
+ * User ID (RFC 9580 §5.2.3.25, hashed subpacket 25 with a non-zero
+ * value)? The primary UID anchors the certificate's identity — for
+ * foopgp it holds the UID:urn:eid: — and, minted once and never
+ * re-issued, it is the OLDEST UID and thus the first the FIFO cap
+ * below would evict. We keep it instead. The self-sig is NOT verified
+ * here (that happens in a later cleaning pass); protecting a single
+ * UID keeps the cap's anti-flood guarantee whole even against a
+ * forged flag.
+ */
+static bool signedpacket_is_primary(struct openpgp_signedpacket_list *spl)
+{
+	struct openpgp_packet_list *s;
+	unsigned char *data;
+	size_t data_len, sub_len, offset, packet_len;
+
+	for (s = spl->sigs; s != NULL; s = s->next) {
+		/* v4/v5 positive certification only. */
+		if (s->packet->length < 6 ||
+				(s->packet->data[0] != 4 &&
+					s->packet->data[0] != 5) ||
+				s->packet->data[1] < 0x10 ||
+				s->packet->data[1] > 0x13) {
+			continue;
+		}
+		data = &s->packet->data[4];
+		data_len = s->packet->length - 4;
+		sub_len = ((size_t) data[0] << 8) + data[1] + 2;
+		if (sub_len > data_len) {
+			continue;
+		}
+		offset = 2;
+		while (offset + 2 < sub_len) {
+			packet_len = data[offset++];
+			if (packet_len > 191 && packet_len < 255) {
+				packet_len = ((packet_len - 192) << 8) +
+					data[offset++] + 192;
+			} else if (packet_len == 255) {
+				if (offset + 4 > sub_len) {
+					break;
+				}
+				packet_len = ((uint32_t) data[offset] << 24) +
+					((uint32_t) data[offset + 1] << 16) +
+					((uint32_t) data[offset + 2] << 8) +
+					data[offset + 3];
+				offset += 4;
+			}
+			if (packet_len == 0 || packet_len > sub_len - offset) {
+				break;
+			}
+			if ((data[offset] & 0x7f) == OPENPGP_SIGSUB_PRIMARYUID &&
+					packet_len >= 2 &&
+					data[offset + 1] != 0) {
+				return true;
+			}
+			offset += packet_len;
+		}
+	}
+	return false;
+}
+
 static int cap_packet_type(struct openpgp_publickey *key,
 		int tag, unsigned int max)
 {
@@ -335,6 +397,7 @@ static int cap_packet_type(struct openpgp_publickey *key,
 	unsigned int                      to_drop;
 	unsigned int                      dropped_oldest = 0;
 	int                               dropped = 0;
+	bool                              primary_kept = false;
 
 	log_assert(key != NULL);
 	/* Pass 1: count matching packets. */
@@ -354,6 +417,14 @@ static int cap_packet_type(struct openpgp_publickey *key,
 	curuid = &key->uids;
 	while (*curuid != NULL && dropped_oldest < to_drop) {
 		if ((*curuid)->packet->tag == tag) {
+			/* Protect the primary UID (identity anchor) from FIFO
+			 * eviction — once, so the cap still bounds a flood. */
+			if (!primary_kept &&
+					signedpacket_is_primary(*curuid)) {
+				primary_kept = true;
+				curuid = &(*curuid)->next;
+				continue;
+			}
 			logthing(LOGTHING_INFO,
 				"Dropping packet of type %d "
 				"beyond cap %u",
