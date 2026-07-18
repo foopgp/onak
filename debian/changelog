@@ -1,3 +1,12 @@
+onak-foopgp (0.6.5.foopgp12-1) unstable; urgency=medium
+
+  [ Mnème ]
+  * cleankey: never FIFO-evict the primary UID from the cap — the identity anchor (foopgp's UID:urn:eid:) is minted once, so it is the oldest UID and a naive FIFO drops it first ; protect the one uid carrying a primary-user-id self-sig subpacket (25), capped at one so the anti-flood guarantee holds against a forged flag + regression test (41-uid key, oldest = primary, survives the cap of 32)
+  * pgp2vcard: carry vCard-property uids (NOTE/ADR/TEL/URL/LANG/GEO…) into the output — a property uid already IS a vCard content line, so pass it through (folded, value untouched) ; FN/EMAIL keep their dedicated paths, classic 'Name <email>' uids unchanged ; jCard splits each carried line into its [name,params,type,value] quad and un-escapes text values
+  * debian: create the onak user via sysusers.d instead of adduser (upstream 1fb7448, adapted to onak-foopgp)
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Sat, 18 Jul 2026 22:19:46 +0200
+
 onak-foopgp (0.6.5.foopgp11-1) unstable; urgency=medium
 
   [ Mnème ]
