@@ -16,8 +16,10 @@ if [ "$1" = "configure" ]; then
         fi
     fi
 
-    # Add the onak user
-    adduser --system --home /var/lib/onak --no-create-home --disabled-login onak
+    # Add the onak user (declaratively, via debian/onak-foopgp.sysusers →
+    # /usr/lib/sysusers.d/onak-foopgp.conf) ; called here so the user exists
+    # before the chown lines below (the dh_installsysusers snippet runs later).
+    systemd-sysusers ${DPKG_ROOT:+--root="$DPKG_ROOT"} onak-foopgp.conf
 
     # Take ownership of the database and spool directory
     chown onak /var/lib/onak

@@ -2,7 +2,7 @@ Source: onak-foopgp
 Section: net
 Priority: optional
 Maintainer: Jean-Jacques Brucker <jjbrucker@foopgp.org>
-Build-Depends: debhelper-compat (= 13)
+Build-Depends: debhelper-compat (= 13), dh-sequence-installsysusers
 Build-Depends-Arch: cmake,
 	libcurl4-gnutls-dev | libcurl-dev,
 	libdb-dev,
@@ -17,7 +17,7 @@ Rules-Requires-Root: no
 
 Package: onak-foopgp
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}, adduser
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
 Recommends: apache2 | httpd
 Suggests: db-util,
  javascript-common,
