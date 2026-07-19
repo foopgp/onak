@@ -311,7 +311,9 @@ int clean_key_signatures(struct onak_dbctx *dbctx,
  * Cap the number of UIDs / UATs we accept on a key. Defends against
  * keys carrying an absurd number of (potentially forged) packets — the
  * 2019 SKS-style poisoning vector. Semantic is FIFO: we keep the
- * newest N and drop the oldest excess. (The list is chronologically
+ * newest N and drop the oldest excess — but revoked and non-revoked
+ * UIDs/UATs get *separate* FIFOs (each capped at N), so a stream of
+ * revocations can never push the still-usable identities out. (The list is chronologically
  * ordered by merge.c's append-at-tail, so newest sits at the tail
  * and oldest sits at the head — but the *reason* we chose this
  * direction is temporal, not positional.)
@@ -388,56 +390,95 @@ static bool signedpacket_is_primary(struct openpgp_signedpacket_list *spl)
 	return false;
 }
 
+/*
+ * Does this UID/UAT carry a certification-revocation self-signature (RFC 9580
+ * §5.2.1, signature type 0x30)? Like signedpacket_is_primary() the signature is
+ * NOT verified here — its presence is enough to route the UID/UAT to the revoked
+ * FIFO, which is capped separately (see cap_packet_type) so that a flood of
+ * revocations can never evict the still-usable identities.
+ */
+static bool signedpacket_is_revoked(struct openpgp_signedpacket_list *spl)
+{
+	struct openpgp_packet_list *s;
+
+	for (s = spl->sigs; s != NULL; s = s->next) {
+		if (s->packet->length >= 2 &&
+				(s->packet->data[0] == 4 ||
+					s->packet->data[0] == 5) &&
+				s->packet->data[1] == 0x30) {
+			return true;
+		}
+	}
+	return false;
+}
+
 static int cap_packet_type(struct openpgp_publickey *key,
-		int tag, unsigned int max)
+		int tag, unsigned int max_active, unsigned int max_revoked)
 {
 	struct openpgp_signedpacket_list **curuid;
 	struct openpgp_signedpacket_list *tmp;
-	unsigned int                      total = 0;
-	unsigned int                      to_drop;
-	unsigned int                      dropped_oldest = 0;
+	unsigned int                      active = 0, revoked = 0;
+	unsigned int                      drop_active, drop_revoked;
 	int                               dropped = 0;
 	bool                              primary_kept = false;
+	bool                              is_rev;
 
 	log_assert(key != NULL);
-	/* Pass 1: count matching packets. */
+	/* Pass 1: count matching packets, split by revocation state — two
+	 * independent FIFOs so a flood of revoked UIDs/UATs can never evict
+	 * the still-usable ones. */
 	for (curuid = &key->uids; *curuid != NULL;
 			curuid = &(*curuid)->next) {
 		if ((*curuid)->packet->tag == tag) {
-			total++;
+			if (signedpacket_is_revoked(*curuid)) {
+				revoked++;
+			} else {
+				active++;
+			}
 		}
 	}
-	if (total <= max) {
+	drop_active  = (active  > max_active)  ? active  - max_active  : 0;
+	drop_revoked = (revoked > max_revoked) ? revoked - max_revoked : 0;
+	if (drop_active == 0 && drop_revoked == 0) {
 		return 0;
 	}
-	to_drop = total - max;
-	/* Pass 2: drop the oldest `to_drop` matching packets — those
-	 * sit at the head of the list under merge.c's append-at-tail.
-	 * The surviving suffix is the newest `max`. */
+	/* Pass 2: drop the oldest excess of each class (head = oldest under
+	 * merge.c's append-at-tail), keeping the newest max of each. The
+	 * primary UID (identity anchor, always non-revoked) is protected once. */
 	curuid = &key->uids;
-	while (*curuid != NULL && dropped_oldest < to_drop) {
-		if ((*curuid)->packet->tag == tag) {
-			/* Protect the primary UID (identity anchor) from FIFO
-			 * eviction — once, so the cap still bounds a flood. */
+	while (*curuid != NULL && (drop_active || drop_revoked)) {
+		if ((*curuid)->packet->tag != tag) {
+			curuid = &(*curuid)->next;
+			continue;
+		}
+		is_rev = signedpacket_is_revoked(*curuid);
+		if (is_rev) {
+			if (drop_revoked == 0) {
+				curuid = &(*curuid)->next;
+				continue;
+			}
+			drop_revoked--;
+		} else {
+			if (drop_active == 0) {
+				curuid = &(*curuid)->next;
+				continue;
+			}
 			if (!primary_kept &&
 					signedpacket_is_primary(*curuid)) {
 				primary_kept = true;
 				curuid = &(*curuid)->next;
 				continue;
 			}
-			logthing(LOGTHING_INFO,
-				"Dropping packet of type %d "
-				"beyond cap %u",
-				tag, max);
-			tmp = *curuid;
-			*curuid = (*curuid)->next;
-			tmp->next = NULL;
-			free_signedpacket_list(tmp);
-			dropped_oldest++;
-			dropped++;
-		} else {
-			curuid = &(*curuid)->next;
+			drop_active--;
 		}
+		logthing(LOGTHING_INFO,
+			"Dropping %s packet of type %d beyond cap",
+			is_rev ? "revoked" : "active", tag);
+		tmp = *curuid;
+		*curuid = (*curuid)->next;
+		tmp->next = NULL;
+		free_signedpacket_list(tmp);
+		dropped++;
 	}
 
 	return dropped;
@@ -445,12 +486,14 @@ static int cap_packet_type(struct openpgp_publickey *key,
 
 int cap_uids_per_key(struct openpgp_publickey *key)
 {
-	return cap_packet_type(key, OPENPGP_PACKET_UID, MAX_UIDS_PER_KEY);
+	return cap_packet_type(key, OPENPGP_PACKET_UID,
+			MAX_UIDS_PER_KEY, MAX_UIDS_PER_KEY);
 }
 
 int cap_uats_per_key(struct openpgp_publickey *key)
 {
-	return cap_packet_type(key, OPENPGP_PACKET_UAT, MAX_UATS_PER_KEY);
+	return cap_packet_type(key, OPENPGP_PACKET_UAT,
+			MAX_UATS_PER_KEY, MAX_UATS_PER_KEY);
 }
 
 int clean_large_packets(struct openpgp_publickey *key)
