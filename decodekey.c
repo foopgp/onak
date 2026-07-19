@@ -28,6 +28,7 @@
 #include "keystructs.h"
 #include "ll.h"
 #include "openpgp.h"
+#include "openpgp.h"
 
 /*
  *	parse_subpackets - Parse the subpackets of a Type 4 signature.
@@ -452,4 +453,26 @@ enum onak_oid onak_parse_oid(uint8_t *buf, size_t len)
 	}
 
 	return oid;
+}
+
+bool signedpacket_is_revoked(struct openpgp_signedpacket_list *sp)
+{
+	struct openpgp_packet_list *sigs;
+
+	if (sp == NULL) {
+		return false;
+	}
+	for (sigs = sp->sigs; sigs != NULL; sigs = sigs->next) {
+		if (sigs->packet == NULL || sigs->packet->data == NULL ||
+				sigs->packet->length < 2) {
+			continue;
+		}
+		if ((sigs->packet->data[0] == 4 ||
+				sigs->packet->data[0] == 5) &&
+				sigs->packet->data[1] ==
+					OPENPGP_SIGTYPE_CERT_REV) {
+			return true;
+		}
+	}
+	return false;
 }

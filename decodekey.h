@@ -109,4 +109,14 @@ enum onak_oid {
 
 enum onak_oid onak_parse_oid(uint8_t *buf, size_t len);
 
+/**
+ *	signedpacket_is_revoked - is this UID/UAT revoked?
+ *	@sp: the signed packet (a UID or a UAT).
+ *
+ *	Returns true if @sp carries a v4/v5 certification-revocation
+ *	signature (sigtype 0x30). The revocation is NOT authenticated (same
+ *	heuristic the rest of onak applies at display / cap time).
+ */
+bool signedpacket_is_revoked(struct openpgp_signedpacket_list *sp);
+
 #endif

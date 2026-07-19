@@ -390,28 +390,6 @@ static bool signedpacket_is_primary(struct openpgp_signedpacket_list *spl)
 	return false;
 }
 
-/*
- * Does this UID/UAT carry a certification-revocation self-signature (RFC 9580
- * §5.2.1, signature type 0x30)? Like signedpacket_is_primary() the signature is
- * NOT verified here — its presence is enough to route the UID/UAT to the revoked
- * FIFO, which is capped separately (see cap_packet_type) so that a flood of
- * revocations can never evict the still-usable identities.
- */
-static bool signedpacket_is_revoked(struct openpgp_signedpacket_list *spl)
-{
-	struct openpgp_packet_list *s;
-
-	for (s = spl->sigs; s != NULL; s = s->next) {
-		if (s->packet->length >= 2 &&
-				(s->packet->data[0] == 4 ||
-					s->packet->data[0] == 5) &&
-				s->packet->data[1] == 0x30) {
-			return true;
-		}
-	}
-	return false;
-}
-
 static int cap_packet_type(struct openpgp_publickey *key,
 		int tag, unsigned int max_active, unsigned int max_revoked)
 {
