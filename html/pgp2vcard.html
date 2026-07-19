@@ -223,7 +223,12 @@ Everything runs in your browser — nothing is uploaded.</p>
   async function keyToVcard(key, label) {
     var warns = [];
     var uids = key.users.filter(function (u) { return u.userID && !isRevokedUser(u); });
-    var names = [], emails = [], eids = {}, extra = [];
+    // vCard-shaped uids (FN:/EMAIL:) are authoritative once a cert joined the
+    // vCard-uid process ; the legacy "Name <email>" uids are kept for the web
+    // of trust but their name/email only fill in for a cert not yet upgraded.
+    // Mixing them would let a legacy name win over the real FN:, and a revoked
+    // EMAIL: whose legacy uid still lives resurface as a duplicate address.
+    var fnames = [], vemails = [], lnames = [], lemails = [], eids = {}, extra = [];
     uids.forEach(function (u) {
       var raw = u.userID.userID || "";
       var m = EID_RE.exec(raw);                                  // eid may sit in any uid shape
@@ -232,12 +237,14 @@ Everything runs in your browser — nothing is uploaded.</p>
       // properties through verbatim, else fall back to classic "Name <email>".
       var pm = PROP_RE.exec(raw), P = pm ? pm[1].toUpperCase() : "";
       if (P === "UID") return;                                   // the eid uid — captured above
-      if (P === "FN") { if (pm[3]) names.push(pm[3]); return; }
-      if (P === "EMAIL") { var e = pm[3].replace(/^<([\s\S]*)>$/, "$1").trim(); if (e) emails.push(e); return; }
+      if (P === "FN") { if (pm[3]) fnames.push(pm[3]); return; }
+      if (P === "EMAIL") { var e = pm[3].replace(/^<([\s\S]*)>$/, "$1").trim(); if (e) vemails.push(e); return; }
       if (CARRY[P]) { extra.push(P + pm[2] + ":" + pm[3]); return; }
-      if (u.userID.name) names.push(u.userID.name);
-      if (u.userID.email) emails.push(u.userID.email);
+      if (u.userID.name) lnames.push(u.userID.name);
+      if (u.userID.email) lemails.push(u.userID.email);
     });
+    var names = fnames.length ? fnames : lnames;      // vCard FN: wins over legacy names
+    var emails = vemails.length ? vemails : lemails;  // vCard EMAIL: wins over legacy addresses
     var eidList = Object.keys(eids);
     var fn = names[0] || (emails[0] ? emails[0].split("@")[0] : label);
     if (!emails.length) warns.push({ t: "warn", m: t("m_noemail").replace("%f", label) });
