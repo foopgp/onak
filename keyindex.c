@@ -641,7 +641,8 @@ static char *extract_uid_email(const char *text, size_t len)
 }
 
 static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
-		struct openpgp_signedpacket_list *uids, bool verbose)
+		struct openpgp_signedpacket_list *uids,
+		struct openpgp_signedpacket_list *skip, bool verbose)
 {
 	struct tmpl_value *out = tmpl_list();
 	struct tmpl_value *entry;
@@ -666,6 +667,16 @@ static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 		 * browser fetches the wrong blob.
 		 */
 		this_idx = is_uat ? imgindx++ : 0;
+
+		/* The primary UID is rendered in its own pub-line slot ; drop
+		 * it here so other_uids doesn't duplicate it. Done by pointer
+		 * (after the imgindx bump above) so it never disturbs the photo
+		 * stride and every other packet — including a UAT stored ahead
+		 * of the primary — still reaches the list. */
+		if (uids == skip) {
+			uids = uids->next;
+			continue;
+		}
 
 		revoked = signedpacket_is_revoked(uids);
 		if (!verbose && revoked) {
@@ -969,14 +980,16 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 		}
 		tmpl_map_set(m, "primary_sigs",
 			build_sigs_list(dbctx, curuid->sigs));
-		curuid = curuid->next;
+		/* Keep curuid on the primary UID : it is the single entry
+		 * build_uid_list() skips in the FULL list below. Passing the
+		 * post-primary tail here used to drop every packet stored ahead
+		 * of it — notably a UAT (photo) minted before the eid UID. */
 	} else {
 		tmpl_map_set(m, "has_primary_uid", tmpl_bool(false));
-		curuid = key->uids;
 	}
 
 	tmpl_map_set(m, "other_uids",
-		build_uid_list(dbctx, curuid, verbose));
+		build_uid_list(dbctx, key->uids, curuid, verbose));
 
 	if (verbose) {
 		tmpl_map_set(m, "subkeys",
