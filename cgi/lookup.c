@@ -240,7 +240,10 @@ int main(int argc, char *argv[])
 	if (mrhkp) {
 		puts("Content-Type: text/plain\n");
 	} else if (op == OP_PHOTO) {
-		puts("Content-Type: image/jpeg\n");
+		/* Headers deferred to the OP_PHOTO branch: only after
+		 * getphoto() do we know whether this is an image (200) or a
+		 * miss (404). Emitting "Content-Type: image/jpeg" up front is
+		 * what made a bad idx serve the HTML footer as a broken JPEG. */
 	} else if (!is_download) {
 		start_html("Lookup of key");
 	}
@@ -362,13 +365,22 @@ int main(int argc, char *argv[])
 
 				if (getphoto(publickey, indx, &photo,
 						&length) == ONAK_E_OK) {
+					puts("Content-Type: image/jpeg\n");
 					fwrite(photo,
 							1,
 							length,
 							stdout);
+				} else {
+					puts("Status: 404 Not Found");
+					puts("Content-Type: text/plain\n");
+					puts("No photo at that index.");
 				}
 				free_publickey(publickey);
 				publickey = NULL;
+			} else {
+				puts("Status: 404 Not Found");
+				puts("Content-Type: text/plain\n");
+				puts("No such key.");
 			}
 			break;
 		default:
@@ -388,7 +400,7 @@ err:
 		}
 		cleanupconfig();
 	}
-	if (!mrhkp && !is_download) {
+	if (!mrhkp && !is_download && op != OP_PHOTO) {
 		puts("<hr>");
 		puts(" &mdash; onak " ONAK_VERSION " &mdash;");
 		if (contact_copy != NULL) {
