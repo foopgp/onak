@@ -219,6 +219,30 @@ Everything runs in your browser — nothing is uploaded.</p>
 
   function isRevokedUser(u) { return !!(u.revocationSignatures && u.revocationSignatures.length); }
 
+  // The certificate's « preferred keyserver » (self-sig subpacket 24) : the
+  // primary uid's value wins, else any non-revoked uid's, else the foopgp
+  // default (mirrors bl-pgpid's BL_PGPID_KEYSERVERS[0]).
+  async function preferredKeyserver(key) {
+    var primks = null, anyks = null;
+    try { var pu = await key.getPrimaryUser(); if (pu && pu.selfCertification) primks = pu.selfCertification.preferredKeyServer; } catch (e) { /* no valid primary */ }
+    if (!primks) key.users.forEach(function (u) {
+      if (!u.userID || isRevokedUser(u)) return;
+      (u.selfCertifications || []).forEach(function (c) { if (c.preferredKeyServer) anyks = c.preferredKeyServer; });
+    });
+    return primks || anyks || "hkps://keys.foopgp.org";
+  }
+
+  // Turn a keyserver URI into the op=get lookup URL for KEY;MEDIATYPE.
+  // hkps→https (443 implicit) ; hkp→http, its default port 11371 made explicit
+  // (http would otherwise hit 80) unless the URI already carries one.
+  function ksToKeyUrl(ks, fpr) {
+    var m = /^(hkps?|https?):\/\/([^\/]+)/i.exec(ks || "");
+    if (!m) return null;
+    var scheme = m[1].toLowerCase(), hostport = m[2];
+    if (scheme === "hkp" && hostport.indexOf(":") < 0) hostport += ":11371";   // only hkp defaults to 11371 (http keeps 80)
+    return (scheme === "hkps" || scheme === "https" ? "https://" : "http://") + hostport + "/pks/lookup?op=get&search=0x" + fpr;
+  }
+
   // Build one vCard (array-of-lines) from an openpgp Key. Returns {lines, warns, jcard}.
   async function keyToVcard(key, label) {
     var warns = [];
@@ -277,16 +301,12 @@ Everything runs in your browser — nothing is uploaded.</p>
     // goes to PHOTO below — no duplication.
     props.push(["key", "data:application/pgp-keys;base64," + b64(minimalCert(key))]);
 
-    // KEY server link: the retrievable cert, emitted only when reachable (HTTP 200).
-    // Cross-origin needs CORS on the keyserver ; degrades gracefully (skipped) when
-    // offline or served off-site. NOTE: op=get returns the key (matches
-    // MEDIATYPE=application/pgp-keys) ; op=index would return an HTML page instead.
-    try {
-      var ksUrl = "https://keys.foopgp.org/pks/lookup?op=get&search=0x" + key.getFingerprint();
-      var ctrl = new AbortController(); setTimeout(function () { ctrl.abort(); }, 4000);
-      var resp = await fetch(ksUrl, { signal: ctrl.signal });
-      if (resp.ok) props.push(["keyserver", ksUrl]);
-    } catch (e) { /* offline / CORS / 404 → skip */ }
+    // KEY server link (KEY;MEDIATYPE): the retrievable-cert URL derived from the
+    // certificate's own « preferred keyserver » (subpacket 24). Always emitted —
+    // it reflects what the cert declares — even when unreachable. op=get returns
+    // the key (matches MEDIATYPE=application/pgp-keys) ; op=index gives HTML.
+    var ksUrl = ksToKeyUrl(await preferredKeyserver(key), key.getFingerprint());
+    if (ksUrl) props.push(["keyserver", ksUrl]);
 
     // PHOTO from non-revoked UAT
     key.users.filter(function (u) { return u.userAttribute && !isRevokedUser(u); }).forEach(function (u) {
