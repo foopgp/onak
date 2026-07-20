@@ -1,3 +1,15 @@
+onak-foopgp (0.6.5.foopgp14-1) unstable; urgency=medium
+
+  [ Mnème ]
+  * pgp2vcard: prefer the vCard FN:/EMAIL: uids over legacy 'Name <email>' uids
+  * pgp2vcard: derive the KEY;MEDIATYPE URL from the cert's preferred keyserver (subpacket 24)
+  * cleankey: split the UID/UAT FIFO cap into revoked and non-revoked queues (32/32, 4/4)
+  * cgi/lookup op=photo: 404 on a missing photo, not the HTML footer served as a broken JPEG
+  * cleankey/keyindex: consolidate the two signedpacket_is_revoked copies into decodekey
+  * keyindex op=index/op=vindex: keep a UAT stored ahead of the primary UID
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Mon, 20 Jul 2026 09:18:00 +0200
+
 onak-foopgp (0.6.5.foopgp12-1) unstable; urgency=medium
 
   [ Mnème ]
