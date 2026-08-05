@@ -1,3 +1,12 @@
+onak-foopgp (0.6.5.foopgp15-1) unstable; urgency=medium
+
+  [ Mnêmê ]
+  * pgp2vcard: stop reading "EMAIL: <addr>" uids
+  * cleankey: shield one "UID:urn:" identity anchor from the FIFO cap
+  * keyindex/foopgp: show the certification date on each signature line
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Wed, 05 Aug 2026 14:23:55 +0200
+
 onak-foopgp (0.6.5.foopgp14-1) unstable; urgency=medium
 
   [ Mnème ]
