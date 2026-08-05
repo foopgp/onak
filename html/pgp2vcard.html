@@ -197,9 +197,14 @@ Everything runs in your browser — nothing is uploaded.</p>
   var EID_RE = /u(?:did)?([45])=([A-Za-z0-9_.+/\-]+)|urn:eid:u([45]):?([A-Za-z0-9_.+/\-]+)/;
 
   // A vCard-shaped uid: "PROP[;params]:[ ]value" (bl-pgpid property uids).
+  // The optional space after the colon is kept as input tolerance only; the
+  // uids we mint write the value flush against the colon.
   var PROP_RE = /^([A-Za-z][A-Za-z0-9-]*)((?:;[^:]*)?):[ ]?([\s\S]*)$/;
-  // Properties (beyond FN/EMAIL/UID, handled apart) carried through verbatim —
-  // the uid already IS a valid, escaped vCard content line.
+  // Properties (beyond FN/UID, handled apart) carried through verbatim — the
+  // uid already IS a valid, escaped vCard content line. EMAIL is deliberately
+  // absent: an address travels in a classic "Name <addr>" uid, which every
+  // OpenPGP tool and every MUA already understands. The vCard EMAIL: property
+  // is still EMITTED below, derived from those legacy uids.
   var CARRY = { NOTE: 1, ADR: 1, TEL: 1, URL: 1, LANG: 1, GEO: 1, TITLE: 1, ROLE: 1, ORG: 1, NICKNAME: 1, BDAY: 1 };
 
   // Extract the JPEG(s) from a UserAttribute packet's opaque subpackets.
@@ -247,28 +252,26 @@ Everything runs in your browser — nothing is uploaded.</p>
   async function keyToVcard(key, label) {
     var warns = [];
     var uids = key.users.filter(function (u) { return u.userID && !isRevokedUser(u); });
-    // vCard-shaped uids (FN:/EMAIL:) are authoritative once a cert joined the
-    // vCard-uid process ; the legacy "Name <email>" uids are kept for the web
-    // of trust but their name/email only fill in for a cert not yet upgraded.
-    // Mixing them would let a legacy name win over the real FN:, and a revoked
-    // EMAIL: whose legacy uid still lives resurface as a duplicate address.
-    var fnames = [], vemails = [], lnames = [], lemails = [], eids = {}, extra = [];
+    // An FN: uid is authoritative over the name carried by a legacy
+    // "Name <email>" uid, which only fills in for a cert not yet upgraded —
+    // otherwise a legacy name would win over the real FN:.
+    // Addresses have no such duality: they only ever come from legacy uids.
+    var fnames = [], lnames = [], lemails = [], eids = {}, extra = [];
     uids.forEach(function (u) {
       var raw = u.userID.userID || "";
       var m = EID_RE.exec(raw);                                  // eid may sit in any uid shape
       if (m) eids["u" + (m[1] || m[3]) + "=" + (m[2] || m[4])] = true;
-      // Route FN/EMAIL through the usual paths, carry the other known vCard
-      // properties through verbatim, else fall back to classic "Name <email>".
+      // Route FN through its own path, carry the other known vCard properties
+      // through verbatim, else fall back to classic "Name <email>".
       var pm = PROP_RE.exec(raw), P = pm ? pm[1].toUpperCase() : "";
       if (P === "UID") return;                                   // the eid uid — captured above
       if (P === "FN") { if (pm[3]) fnames.push(pm[3]); return; }
-      if (P === "EMAIL") { var e = pm[3].replace(/^<([\s\S]*)>$/, "$1").trim(); if (e) vemails.push(e); return; }
       if (CARRY[P]) { extra.push(P + pm[2] + ":" + pm[3]); return; }
       if (u.userID.name) lnames.push(u.userID.name);
       if (u.userID.email) lemails.push(u.userID.email);
     });
     var names = fnames.length ? fnames : lnames;      // vCard FN: wins over legacy names
-    var emails = vemails.length ? vemails : lemails;  // vCard EMAIL: wins over legacy addresses
+    var emails = lemails;                             // addresses come from legacy uids only
     var eidList = Object.keys(eids);
     var fn = names[0] || (emails[0] ? emails[0].split("@")[0] : label);
     if (!emails.length) warns.push({ t: "warn", m: t("m_noemail").replace("%f", label) });
