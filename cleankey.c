@@ -17,6 +17,7 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "build-config.h"
@@ -390,6 +391,34 @@ static bool signedpacket_is_primary(struct openpgp_signedpacket_list *spl)
 	return false;
 }
 
+/*
+ * Does this UID hold a URN identity anchor, i.e. does its text start with
+ * "UID:urn:" ? For foopgp that is the entity identifier
+ * ("UID:urn:eid:u4…"), but the prefix is kept deliberately broad so other
+ * URN namespaces (uuid, …) get the same protection.
+ *
+ * Like the primary UID, such an anchor is minted once and never re-issued:
+ * it is among the OLDEST UIDs and thus the first the FIFO cap below would
+ * evict. Also like the primary flag, the text is NOT authenticated here —
+ * anyone can craft a UID that starts with those eight bytes. Protecting at
+ * most ONE of them is therefore essential: it keeps the cap's anti-flood
+ * guarantee whole, where protecting every match would let a flood of forged
+ * anchors defeat the cap entirely.
+ */
+static bool signedpacket_is_urn_anchor(struct openpgp_signedpacket_list *spl)
+{
+	static const char prefix[] = "UID:urn:";
+	const size_t prefix_len = sizeof(prefix) - 1;
+
+	if (spl->packet == NULL ||
+			spl->packet->tag != OPENPGP_PACKET_UID ||
+			spl->packet->length < prefix_len) {
+		return false;
+	}
+
+	return memcmp(spl->packet->data, prefix, prefix_len) == 0;
+}
+
 static int cap_packet_type(struct openpgp_publickey *key,
 		int tag, unsigned int max_active, unsigned int max_revoked)
 {
@@ -399,6 +428,7 @@ static int cap_packet_type(struct openpgp_publickey *key,
 	unsigned int                      drop_active, drop_revoked;
 	int                               dropped = 0;
 	bool                              primary_kept = false;
+	bool                              anchor_kept = false;
 	bool                              is_rev;
 
 	log_assert(key != NULL);
@@ -422,7 +452,8 @@ static int cap_packet_type(struct openpgp_publickey *key,
 	}
 	/* Pass 2: drop the oldest excess of each class (head = oldest under
 	 * merge.c's append-at-tail), keeping the newest max of each. The
-	 * primary UID (identity anchor, always non-revoked) is protected once. */
+	 * primary UID and the URN anchor are each protected once — no more, so
+	 * that a flood of forged anchors cannot push real UIDs out. */
 	curuid = &key->uids;
 	while (*curuid != NULL && (drop_active || drop_revoked)) {
 		if ((*curuid)->packet->tag != tag) {
@@ -444,6 +475,12 @@ static int cap_packet_type(struct openpgp_publickey *key,
 			if (!primary_kept &&
 					signedpacket_is_primary(*curuid)) {
 				primary_kept = true;
+				curuid = &(*curuid)->next;
+				continue;
+			}
+			if (!anchor_kept &&
+					signedpacket_is_urn_anchor(*curuid)) {
+				anchor_kept = true;
 				curuid = &(*curuid)->next;
 				continue;
 			}
