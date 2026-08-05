@@ -583,8 +583,11 @@ static struct tmpl_value *build_sigs_list(struct onak_dbctx *dbctx,
 	char *resolved;
 	uint64_t sigid;
 	bool is_rev;
+	time_t created;
+	struct tm created_tm;
 
 	while (sigs != NULL) {
+		created = 0;
 		sigid = sig_keyid(sigs->packet);
 		is_rev = (sigs->packet->data[0] == 4 &&
 				sigs->packet->data[1] == 0x30);
@@ -599,6 +602,25 @@ static struct tmpl_value *build_sigs_list(struct onak_dbctx *dbctx,
 		tmpl_map_set(sig, "keyid_hex16",
 			tmpl_string_take(
 				strdup_printf("%016" PRIX64, sigid)));
+		/*
+		 * Certification date. Only the foopgp template shows it: the
+		 * vanilla one reproduces the legacy gpg/HKP listing, which has
+		 * never carried a date on its sig lines. sig_info() reads the
+		 * creation subpacket for v4/v5 and the fixed field for v2/3 ;
+		 * a signature without one is rendered without a date rather
+		 * than with a misleading epoch.
+		 */
+		if (sig_info(sigs->packet, NULL, &created) == ONAK_E_OK &&
+				created > 0) {
+			gmtime_r(&created, &created_tm);
+			tmpl_map_set(sig, "has_date", tmpl_bool(true));
+			tmpl_map_set(sig, "date_str_iso",
+				tmpl_string_take(
+					strdup_printf("%04d-%02d-%02d",
+						created_tm.tm_year + 1900,
+						created_tm.tm_mon + 1,
+						created_tm.tm_mday)));
+		}
 		tmpl_map_set(sig, "signer_uid_known",
 			tmpl_bool(resolved != NULL));
 		if (resolved != NULL) {
