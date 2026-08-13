@@ -1,3 +1,11 @@
+onak-foopgp (0.6.5.foopgp17-1) unstable; urgency=medium
+
+  [ jjbrucker ]
+  * Humanize directives in /etc/apache2/sites-available/onak-keyserver.conf
+  * Many renaming OpenPGP → PGP, to stay away from OpenPGP/LibrePGP drama
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Thu, 13 Aug 2026 20:38:48 +0200
+
 onak-foopgp (0.6.5.foopgp16-1) unstable; urgency=medium
 
   [ Mnêmê ]
