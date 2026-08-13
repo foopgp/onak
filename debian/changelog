@@ -1,3 +1,16 @@
+onak-foopgp (0.6.5.foopgp16-1) unstable; urgency=medium
+
+  [ Mnêmê ]
+  * foopgp template: clickable vCard uids, and a footer to leave by
+  * Serve the eid generators from the key server too
+  * A landing page at /, the plain key server under /pks/
+  * gpgwww: same '..' label as lookup for the parent link
+  * Install the vhost, ship the pages, offer the path finder
+  * gpgwww: stop repeating a direct path, and read 64-bit key ids
+  * hashquery: refuse a request that claims more than a mebibyte
+
+ -- jjbrucker <jjbrucker@foopgp.org>  Thu, 13 Aug 2026 17:58:07 +0200
+
 onak-foopgp (0.6.5.foopgp15-1) unstable; urgency=medium
 
   [ Mnêmê ]
