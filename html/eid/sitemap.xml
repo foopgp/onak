@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!--
+ Written by hand, on purpose: /eid/ lives in static/ and Hugo only sitemaps
+ content/. Keep the three <loc> in sync when a page is added or moved.
+ Declared to crawlers from static/robots.txt.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<url>
+		<loc>https://foopgp.org/eid/</loc>
+		<changefreq>monthly</changefreq>
+		<priority>0.8</priority>
+	</url>
+	<url>
+		<loc>https://foopgp.org/eid/u4/</loc>
+		<changefreq>monthly</changefreq>
+		<priority>0.7</priority>
+	</url>
+	<url>
+		<loc>https://foopgp.org/eid/u5/</loc>
+		<changefreq>monthly</changefreq>
+		<priority>0.7</priority>
+	</url>
+</urlset>

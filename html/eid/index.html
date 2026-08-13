@@ -1,0 +1,378 @@
+<!--
+ Copyright 2026 Jean-Jacques Brucker (u4sRyUhEbNU5OwyLEjfSwaXAe_42.17-002.76) <jjbrucker@foopgp.org>
+ Copyright 2026 Mnêmê (u5001777236237.945e_43.30_005.38 claude-opus-5) <mneme@foopgp.org>
+
+ SPDX-License-Identifier: GPL-2.0-or-later
+
+ Self-contained: no external resource, copy this file anywhere and it works.
+-->
+
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="description" content="Generate an EID, the short deterministic identifier behind PGP ID: u4 for a person with civil-registry data (ICAO 9303 / ISO 7501), u5 for any other entity. Computed in your browser, nothing is sent anywhere." />
+	<link rel="canonical" href="https://foopgp.org/eid/" />
+	<title>Generate your Entity Identifiers</title>
+
+	<style type="text/css">
+		body {
+			background-color: #2c284b;
+			font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+			color: #f4f7fc;
+			text-align: center;
+			margin: 0;
+			padding: 0 0 20px 0;
+		}
+
+		h1 {
+			color: #ff7f00;
+			margin-top: 1.2em;
+			font-weight: 700;
+			font-size: 1.8em;
+		}
+
+		h2 {
+			color: #ff7f00;
+			font-size: 1.3em;
+			margin: 0 0 .4em 0;
+		}
+
+		.lead {
+			max-width: 720px;
+			width: 90%;
+			margin: 0 auto;
+			font-size: 1.05em;
+			line-height: 1.5;
+		}
+
+		.doors {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 1.5em;
+			margin: 2.5em auto 0 auto;
+			max-width: 900px;
+			width: 92%;
+		}
+
+		a.door {
+			display: block;
+			flex: 1 1 320px;
+			max-width: 400px;
+			padding: 1.8em;
+			background-color: #3f3757;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, .2);
+			text-decoration: none;
+			color: #f4f7fc;
+			text-align: left;
+			border: 2px solid transparent;
+			transition: border-color .15s, transform .15s;
+		}
+
+		a.door:hover,
+		a.door:focus {
+			border-color: #ff7f00;
+			transform: translateY(-2px);
+		}
+
+		a.door .what {
+			font-size: .95em;
+			line-height: 1.45;
+		}
+
+		a.door .sample {
+			font-family: monospace;
+			font-size: .8em;
+			color: #b9b3d0;
+			margin-top: .9em;
+			word-break: break-all;
+		}
+
+		.info {
+			font-size: .9em;
+			margin-top: 2.5em;
+			line-height: 1.6;
+		}
+
+		a,
+		a:visited,
+		a:active {
+			color: #ff7f00;
+		}
+
+		a.door,
+		a.door:visited {
+			color: #f4f7fc;
+		}
+
+		select {
+			background-color: #2c284b;
+			color: #f4f7fc;
+			border: 1px solid #6b6390;
+			border-radius: 4px;
+			padding: .25em;
+		}
+
+		.image-container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 40px;
+			margin-top: 20px;
+		}
+
+		.image-container img {
+			width: 110px;
+			height: auto;
+			cursor: pointer;
+		}
+
+		.language-switcher {
+			display: flex;
+			justify-content: center;
+			margin-top: 1.2em;
+		}
+
+		#language {
+			max-width: 200px;
+			text-align: center;
+		}
+
+		/* Logos stay side by side: they shrink, they do not stack. */
+		@media (max-width: 600px) {
+			.image-container {
+				gap: 20px;
+			}
+
+			.image-container img {
+				width: 80px;
+			}
+		}
+	</style>
+</head>
+
+<body>
+
+	<!-- foopgp and Open-UDC: where the EID comes from. -->
+	<div class="image-container">
+		<a href="https://foopgp.org/" target="_blank" rel="noopener">
+			<img src="https://foopgp.org/images/logos/foopgp_logo_white.png" alt="foopgp_association" />
+		</a>
+		<a href="https://github.com/Open-UDC" target="_blank" rel="noopener">
+			<img src="https://foopgp.org/images/logos/openUDC_logo.png" alt="openUDC_project" />
+		</a>
+	</div>
+
+	<div class="language-switcher">
+		<select id="language" onchange="translatePage(this.value)">
+			<option value="en">English</option>
+			<option value="fr">Français</option>
+			<option value="it">Italiano</option>
+			<option value="es">Español</option>
+			<option value="de">Deutsch</option>
+			<option value="uk">Українська</option>
+			<option value="pt">Português</option>
+			<option value="pl">Polski</option>
+			<option value="ru">Русский</option>
+		</select>
+	</div>
+
+	<h1 id="t_title">Generate your Entity Identifiers</h1>
+
+	<p class="lead" id="t_lead">
+		An <strong>EID</strong> is a short, deterministic and decentralised identifier.
+		Nobody issues it and nobody can revoke it: anyone holding the same origin data
+		recomputes exactly the same string. Choose the kind that fits.
+	</p>
+
+	<div class="doors">
+		<a class="door" id="door_u4" href="u4/">
+			<h2 id="t_u4h">u4 — a person</h2>
+			<div class="what" id="t_u4w">
+				For a human being with civil-registry data following the international
+				standards (ICAO 9303 / ISO 7501): birth surname, given names, date and
+				country of birth. The identifier reveals none of it.
+			</div>
+			<div class="sample">u4vb6UZTMKsllgoH760pc0xwe_42.17-002.76</div>
+		</a>
+
+		<a class="door" id="door_u5" href="u5/">
+			<h2 id="t_u5h">u5 — any other entity</h2>
+			<div class="what" id="t_u5w">
+				For an association, a company, a software component, an automated process
+				— or a person who prefers not to disclose civil-registry data. Anchored to
+				a moment and a place of origin.
+			</div>
+			<div class="sample">u5001777236237.945e_43.30_005.38</div>
+		</a>
+	</div>
+
+	<p class="info" id="t_more"></p>
+
+	<script type="text/javascript">
+		const translations = {
+			en: {
+				title: "Generate your Entity Identifiers",
+				lead: "An <strong>EID</strong> is a short, deterministic and decentralised identifier. Nobody issues it and nobody can revoke it: anyone holding the same origin data recomputes exactly the same string. Choose the kind that fits.",
+				u4h: "u4 — a person",
+				u4w: "For a human being with civil-registry data following the international standards (ICAO 9303 / ISO 7501): birth surname, given names, date and country of birth. The identifier reveals none of it.",
+				u5h: "u5 — any other entity",
+				u5w: "For an association, a company, a software component, an automated process — or a person who prefers not to disclose civil-registry data. Anchored to a moment and a place of origin.",
+				tipLang: "Change the page language.",
+				tipU4: "Open the u4 generator — a person with civil-registry data.",
+				tipU5: "Open the u5 generator — any other entity.",
+				spec: "Specification", about: "What is PGP ID?", home: "foopgp.org", keys: "Key server"
+			},
+			fr: {
+				title: "Générez vos identifiants d'entité",
+				lead: "Un <strong>EID</strong> est un identifiant court, déterministe et décentralisé. Personne ne le délivre et personne ne peut le révoquer : quiconque dispose des mêmes données d'origine recalcule exactement la même chaîne. Choisissez celui qui vous convient.",
+				u4h: "u4 — une personne",
+				u4w: "Pour un être humain doté d'un état civil aux normes internationales (ICAO 9303 / ISO 7501) : nom de naissance, prénoms, date et pays de naissance. L'identifiant n'en révèle rien.",
+				u5h: "u5 — toute autre entité",
+				u5w: "Pour une association, une entreprise, un composant logiciel, un processus automatisé — ou une personne qui préfère ne pas divulguer son état civil. Ancré sur un instant et un lieu d'origine.",
+				tipLang: "Change la langue de la page.",
+				tipU4: "Ouvre le générateur u4 — une personne dotée d'un état civil.",
+				tipU5: "Ouvre le générateur u5 — toute autre entité.",
+				spec: "Spécification", about: "Qu'est-ce que PGP ID ?", home: "foopgp.org", keys: "Serveur de clés"
+			},
+			it: {
+				title: "Genera i tuoi identificatori di entità",
+				lead: "Un <strong>EID</strong> è un identificatore breve, deterministico e decentralizzato. Nessuno lo rilascia e nessuno può revocarlo: chiunque disponga degli stessi dati di origine ricalcola esattamente la stessa stringa. Scegli quello adatto.",
+				u4h: "u4 — una persona",
+				u4w: "Per un essere umano con dati di stato civile secondo gli standard internazionali (ICAO 9303 / ISO 7501): cognome di nascita, nomi, data e paese di nascita. L'identificatore non ne rivela nulla.",
+				u5h: "u5 — qualsiasi altra entità",
+				u5w: "Per un'associazione, un'azienda, un componente software, un processo automatico — o una persona che preferisce non divulgare i propri dati anagrafici. Ancorato a un momento e a un luogo di origine.",
+				tipLang: "Cambia la lingua della pagina.",
+				tipU4: "Apre il generatore u4 — una persona con dati di stato civile.",
+				tipU5: "Apre il generatore u5 — qualsiasi altra entità.",
+				spec: "Specifica", about: "Che cos'è PGP ID?", home: "foopgp.org", keys: "Server di chiavi"
+			},
+			es: {
+				title: "Genere sus identificadores de entidad",
+				lead: "Un <strong>EID</strong> es un identificador corto, determinista y descentralizado. Nadie lo emite y nadie puede revocarlo: cualquiera que disponga de los mismos datos de origen recalcula exactamente la misma cadena. Elija el que corresponda.",
+				u4h: "u4 — una persona",
+				u4w: "Para un ser humano con datos de registro civil según las normas internacionales (ICAO 9303 / ISO 7501): apellido de nacimiento, nombres, fecha y país de nacimiento. El identificador no revela nada de ello.",
+				u5h: "u5 — cualquier otra entidad",
+				u5w: "Para una asociación, una empresa, un componente de software, un proceso automatizado — o una persona que prefiere no divulgar sus datos de registro civil. Anclado a un momento y un lugar de origen.",
+				tipLang: "Cambia el idioma de la página.",
+				tipU4: "Abre el generador u4 — una persona con datos de registro civil.",
+				tipU5: "Abre el generador u5 — cualquier otra entidad.",
+				spec: "Especificación", about: "¿Qué es PGP ID?", home: "foopgp.org", keys: "Servidor de claves"
+			},
+			de: {
+				title: "Erzeugen Sie Ihre Entitätskennungen",
+				lead: "Eine <strong>EID</strong> ist eine kurze, deterministische und dezentrale Kennung. Niemand vergibt sie und niemand kann sie widerrufen: Wer dieselben Ursprungsdaten hat, berechnet exakt dieselbe Zeichenkette. Wählen Sie die passende Art.",
+				u4h: "u4 — eine Person",
+				u4w: "Für einen Menschen mit Personenstandsdaten nach den internationalen Normen (ICAO 9303 / ISO 7501): Geburtsname, Vornamen, Geburtsdatum und -land. Die Kennung verrät davon nichts.",
+				u5h: "u5 — jede andere Entität",
+				u5w: "Für einen Verein, ein Unternehmen, eine Softwarekomponente, einen automatisierten Prozess — oder eine Person, die ihre Personenstandsdaten nicht preisgeben möchte. Verankert an einem Zeitpunkt und einem Ort des Ursprungs.",
+				tipLang: "Ändert die Sprache der Seite.",
+				tipU4: "Öffnet den u4-Generator — eine Person mit Personenstandsdaten.",
+				tipU5: "Öffnet den u5-Generator — jede andere Entität.",
+				spec: "Spezifikation", about: "Was ist PGP ID?", home: "foopgp.org", keys: "Schlüsselserver"
+			},
+			uk: {
+				title: "Згенеруйте свої ідентифікатори сутностей",
+				lead: "<strong>EID</strong> — це короткий, детермінований і децентралізований ідентифікатор. Ніхто його не видає і ніхто не може його відкликати: будь-хто з тими самими вихідними даними обчислить точно той самий рядок. Оберіть потрібний вид.",
+				u4h: "u4 — особа",
+				u4w: "Для людини з даними цивільного стану за міжнародними стандартами (ICAO 9303 / ISO 7501): прізвище при народженні, імена, дата та країна народження. Ідентифікатор нічого з цього не розкриває.",
+				u5h: "u5 — будь-яка інша сутність",
+				u5w: "Для об'єднання, компанії, програмного компонента, автоматизованого процесу — або особи, яка воліє не розкривати дані цивільного стану. Прив'язаний до моменту й місця виникнення.",
+				tipLang: "Змінює мову сторінки.",
+				tipU4: "Відкриває генератор u4 — особа з даними цивільного стану.",
+				tipU5: "Відкриває генератор u5 — будь-яка інша сутність.",
+				spec: "Специфікація", about: "Що таке PGP ID?", home: "foopgp.org", keys: "Сервер ключів"
+			},
+			pt: {
+				title: "Gere os seus identificadores de entidade",
+				lead: "Um <strong>EID</strong> é um identificador curto, determinístico e descentralizado. Ninguém o emite e ninguém o pode revogar: quem tiver os mesmos dados de origem recalcula exatamente a mesma cadeia. Escolha o que lhe convém.",
+				u4h: "u4 — uma pessoa",
+				u4w: "Para um ser humano com dados de registo civil segundo as normas internacionais (ICAO 9303 / ISO 7501): apelido de nascimento, nomes próprios, data e país de nascimento. O identificador não revela nada disso.",
+				u5h: "u5 — qualquer outra entidade",
+				u5w: "Para uma associação, uma empresa, um componente de software, um processo automatizado — ou uma pessoa que prefira não divulgar os seus dados de registo civil. Ancorado a um momento e a um local de origem.",
+				tipLang: "Muda o idioma da página.",
+				tipU4: "Abre o gerador u4 — uma pessoa com dados de registo civil.",
+				tipU5: "Abre o gerador u5 — qualquer outra entidade.",
+				spec: "Especificação", about: "O que é PGP ID?", home: "foopgp.org", keys: "Servidor de chaves"
+			},
+			pl: {
+				title: "Wygeneruj swoje identyfikatory podmiotów",
+				lead: "<strong>EID</strong> to krótki, deterministyczny i zdecentralizowany identyfikator. Nikt go nie wydaje i nikt nie może go unieważnić: każdy dysponujący tymi samymi danymi źródłowymi obliczy dokładnie ten sam ciąg. Wybierz odpowiedni rodzaj.",
+				u4h: "u4 — osoba",
+				u4w: "Dla człowieka posiadającego dane stanu cywilnego zgodne z normami międzynarodowymi (ICAO 9303 / ISO 7501): nazwisko rodowe, imiona, data i kraj urodzenia. Identyfikator nic z tego nie ujawnia.",
+				u5h: "u5 — każdy inny podmiot",
+				u5w: "Dla stowarzyszenia, firmy, komponentu oprogramowania, procesu automatycznego — albo osoby, która woli nie ujawniać danych stanu cywilnego. Zakotwiczony w momencie i miejscu powstania.",
+				tipLang: "Zmienia język strony.",
+				tipU4: "Otwiera generator u4 — osoba z danymi stanu cywilnego.",
+				tipU5: "Otwiera generator u5 — każdy inny podmiot.",
+				spec: "Specyfikacja", about: "Czym jest PGP ID?", home: "foopgp.org", keys: "Serwer kluczy"
+			},
+			ru: {
+				title: "Сгенерируйте свои идентификаторы сущностей",
+				lead: "<strong>EID</strong> — это короткий, детерминированный и децентрализованный идентификатор. Никто его не выдаёт и никто не может его отозвать: любой, у кого есть те же исходные данные, вычислит точно ту же строку. Выберите подходящий вид.",
+				u4h: "u4 — человек",
+				u4w: "Для человека с данными актов гражданского состояния по международным стандартам (ICAO 9303 / ISO 7501): фамилия при рождении, имена, дата и страна рождения. Идентификатор ничего из этого не раскрывает.",
+				u5h: "u5 — любая другая сущность",
+				u5w: "Для объединения, компании, программного компонента, автоматизированного процесса — или человека, предпочитающего не раскрывать данные о гражданском состоянии. Привязан к моменту и месту возникновения.",
+				tipLang: "Меняет язык страницы.",
+				tipU4: "Открывает генератор u4 — человек с данными актов гражданского состояния.",
+				tipU5: "Открывает генератор u5 — любая другая сущность.",
+				spec: "Спецификация", about: "Что такое PGP ID?", home: "foopgp.org", keys: "Сервер ключей"
+			}
+		};
+
+		function translatePage(lang) {
+			const t = translations[lang] || translations.en;
+			document.title = t.title;
+			document.documentElement.lang = lang;
+			for (const k of ["title", "lead", "u4h", "u4w", "u5h", "u5w"]) {
+				const el = document.getElementById("t_" + k);
+				if (el) el.innerHTML = t[k];
+			}
+			// The chosen language follows the visitor through the door.
+			document.getElementById("door_u4").href = "u4/?lang=" + lang;
+			document.getElementById("door_u5").href = "u5/?lang=" + lang;
+
+			// "title" doubles as a screen-reader description and a mouse tooltip.
+			document.getElementById("door_u4").title = t.tipU4;
+			document.getElementById("door_u5").title = t.tipU5;
+			document.getElementById("language").title = t.tipLang;
+			// Absolute links: this page is meant to be copied and served elsewhere.
+			const base = (lang === "fr") ? "https://foopgp.org/fr/" : "https://foopgp.org/";
+			document.getElementById("t_more").innerHTML =
+				'<a href="https://foopgp.org/documents/en/draft-foopgp-urn-eid-00.txt">' + t.spec + '</a>'
+				+ ' &nbsp;·&nbsp; <a href="' + base + 'solutions/pgp-id/">' + t.about + '</a>'
+				+ ' &nbsp;·&nbsp; <a href="' + base + '">' + t.home + '</a>'
+				// The key server serves a copy of these pages, and is where
+				// the identifier one mints here ends up published.
+				+ ' &nbsp;·&nbsp; <a href="https://keys.foopgp.org/">' + t.keys + '</a>';
+		}
+
+		/* ?lang=it wins over the browser, so a link can carry its language. */
+		function pickLang() {
+			const norm = s => {
+				const c = (s || "").slice(0, 2).toLowerCase();
+				return translations[c] ? c : "";
+			};
+			const url = norm(new URLSearchParams(location.search).get("lang"));
+			if (url) return url;
+			for (const l of (navigator.languages || [navigator.language || "en"])) {
+				const c = norm(l);
+				if (c) return c;
+			}
+			return "en";
+		}
+
+		(function () {
+			const lang = pickLang();
+			document.getElementById("language").value = lang;
+			translatePage(lang);
+		})();
+	</script>
+
+</body>
+
+</html>

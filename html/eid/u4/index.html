@@ -1,0 +1,2176 @@
+<!--
+ Copyright (c) 2021 Jean-Jacques Brucker udid4:sRyUhEbNU5OwyLEjfSwaXAe_42.17-002.76
+ Copyright (c) 2012, 2013 Michele Bini <michele.bini@gmail.com>
+ Copyright (c) Chris Veness 2002-2010
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License along
+ with this program; if not, write to the Free Software Foundation, Inc.,
+ 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+ The SHA-1 implementation was obtained from
+ http://www.movable-type.co.uk/scripts/sha1.html
+ and is licensed with Creative Commons Attribution License 3.0
+-->
+
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="description" content="Generate a u4 Entity Identifier from birth civil records — surname, given names, date and country of birth. The identifier reveals none of it. Computed in your browser, nothing is sent anywhere." />
+	<link rel="canonical" href="https://foopgp.org/eid/u4/" />
+	<title>Generate your u4 Entity Identifier</title>
+
+	<script type="text/javascript">
+
+		const countries = [
+			["Aruba", "ABW", "e_12.52-069.98", "AW"],
+			["Afghanistan", "AFG", "e_33.84_066.00", "AF"],
+			["Angola", "AGO", "e-12.29_017.54", "AO"],
+			["Anguilla", "AIA", "e_18.22-063.06", "AI"],
+			["Albania", "ALB", "e_41.14_020.05", "AL"],
+			["Aland Islands", "ALA", "e_60.21_019.95", "AX"],
+			["Andorra", "AND", "e_42.54_001.56", "AD"],
+			["United Arab Emirates", "ARE", "e_23.91_054.30", "AE"],
+			["Argentina", "ARG", "e-35.38-065.18", "AR"],
+			["Armenia", "ARM", "e_40.29_044.93", "AM"],
+			["American Samoa", "ASM", "e-14.30-170.72", "AS"],
+			["Antarctica", "ATA", "e-80.51_019.92", "AQ"],
+			["French Southern and Antarctic Lands", "ATF", "e-49.25_069.23", "TF"],
+			["Antigua and Barbuda", "ATG", "e_17.28-061.79", "AG"],
+			["Australia", "AUS", "e-25.73_134.49", "AU"],
+			["Austria", "AUT", "e_47.59_014.13", "AT"],
+			["Azerbaijan", "AZE", "e_40.29_047.55", "AZ"],
+			["Burundi", "BDI", "e-03.36_029.88", "BI"],
+			["Belgium", "BEL", "e_50.64_004.64", "BE"],
+			["Benin", "BEN", "e_09.64_002.33", "BJ"],
+			["Burkina Faso", "BFA", "e_12.27-001.75", "BF"],
+			["Bangladesh", "BGD", "e_23.87_090.24", "BD"],
+			["Bulgaria", "BGR", "e_42.77_025.22", "BG"],
+			["Bahrain", "BHR", "e_26.04_050.54", "BH"],
+			["Canada", "CAN", "e_61.36-098.31", "CA"],
+			["Bahamas", "BHS", "e_24.29-076.63", "BS"],
+			["Bosnia and Herzegovina", "BIH", "e_44.17_017.77", "BA"],
+			["Saint-Barthélemy", "BLM", "e_17.90-062.84", "BL"],
+			["Belarus", "BLR", "e_53.53_028.03", "BY"],
+			["Belize", "BLZ", "e_17.20-088.71", "BZ"],
+			["Bermuda", "BMU", "e_32.31-064.75", "BM"],
+			["Bolivia", "BOL", "e-16.71-064.69", "BO"],
+			["Brazil", "BRA", "e-10.79-053.10", "BR"],
+			["Barbados", "BRB", "e_13.18-059.56", "BB"],
+			["Brunei Darussalam", "BRN", "e_04.52_114.72", "BN"],
+			["Bhutan", "BTN", "e_27.41_090.40", "BT"],
+			["Botswana", "BWA", "e-22.18_023.80", "BW"],
+			["Central African Republic", "CAF", "e_06.57_020.47", "CF"],
+			["Switzerland", "CHE", "e_46.80_008.21", "CH"],
+			["Chile", "CHL", "e-37.73-071.38", "CL"],
+			["China", "CHN", "e_36.56_103.82", "CN"],
+			["Côte d'Ivoire", "CIV", "e_07.63-005.57", "CI"],
+			["Cameroon", "CMR", "e_05.69_012.74", "CM"],
+			["Democratic Republic of the Congo", "COD", "e-02.88_023.64", "CD"],
+			["Republic of Congo", "COG", "e-00.84_015.22", "CG"],
+			["Cook Islands", "COK", "e-21.22-159.79", "CK"],
+			["Colombia", "COL", "e_03.91-073.08", "CO"],
+			["Comoros", "COM", "e-11.88_043.68", "KM"],
+			["Cape Verde", "CPV", "e_15.96-023.96", "CV"],
+			["Costa Rica", "CRI", "e_09.98-084.19", "CR"],
+			["Cuba", "CUB", "e_21.62-079.02", "CU"],
+			["Curaçao", "CUW", "e_12.20-068.97", "CW"],
+			["Cayman Islands", "CYM", "e_19.43-080.91", "KY"],
+			["Cyprus", "CYP", "e_34.92_033.01", "CY"],
+			["Czech Republic", "CZE", "e_49.73_015.31", "CZ"],
+			["Germany", "DEU", "e_51.11_010.39", "DE"],
+			["Djibouti", "DJI", "e_11.75_042.56", "DJ"],
+			["Dominica", "DMA", "e_15.44-061.36", "DM"],
+			["Denmark", "DNK", "e_55.98_010.03", "DK"],
+			["Dominican Republic", "DOM", "e_18.89-070.51", "DO"],
+			["Algeria", "DZA", "e_28.16_002.62", "DZ"],
+			["Ecuador", "ECU", "e-01.42-078.75", "EC"],
+			["Egypt", "EGY", "e_26.50_029.86", "EG"],
+			["Eritrea", "ERI", "e_15.36_038.85", "ER"],
+			["Spain", "ESP", "e_40.24-003.65", "ES"],
+			["Estonia", "EST", "e_58.67_025.54", "EE"],
+			["Ethiopia", "ETH", "e_08.62_039.60", "ET"],
+			["Finland", "FIN", "e_64.50_026.27", "FI"],
+			["Fiji", "FJI", "e-17.43_165.45", "FJ"],
+			["France", "FRA", "e_42.17-002.76", "FR"],
+			["Faeroe Islands", "FRO", "e_62.05-006.88", "FO"],
+			["Federated States of Micronesia", "FSM", "e_07.45_153.24", "FM"],
+			["Gabon", "GAB", "e-00.59_011.79", "GA"],
+			["United Kingdom", "GBR", "e_54.12-002.87", "GB"],
+			["Georgia", "GEO", "e_42.17_043.51", "GE"],
+			["Guernsey", "GGY", "e_49.47-002.57", "GG"],
+			["Ghana", "GHA", "e_07.95-001.22", "GH"],
+			["Guinea", "GIN", "e_10.44-010.94", "GN"],
+			["The Gambia", "GMB", "e_13.45-015.40", "GM"],
+			["Guinea-Bissau", "GNB", "e_12.05-014.95", "GW"],
+			["Equatorial Guinea", "GNQ", "e_01.71_010.34", "GQ"],
+			["Greece", "GRC", "e_39.07_022.96", "GR"],
+			["Grenada", "GRD", "e_12.12-061.68", "GD"],
+			["Greenland", "GRL", "e_74.71-041.34", "GL"],
+			["Guatemala", "GTM", "e_15.69-090.36", "GT"],
+			["Guam", "GUM", "e_13.44_144.77", "GU"],
+			["Guyana", "GUY", "e_04.79-058.98", "GY"],
+			["Hong Kong", "HKG", "e_22.40_114.11", "HK"],
+			["Heard I. and McDonald Islands", "HMD", "e-53.09_073.52", "HM"],
+			["Honduras", "HND", "e_14.83-086.62", "HN"],
+			["Croatia", "HRV", "e_45.08_016.40", "HR"],
+			["Haiti", "HTI", "e_18.94-072.69", "HT"],
+			["Hungary", "HUN", "e_47.16_019.40", "HU"],
+			["Indonesia", "IDN", "e-02.22_117.24", "ID"],
+			["Isle of Man", "IMN", "e_54.22-004.54", "IM"],
+			["India", "IND", "e_22.89_079.61", "IN"],
+			["Ireland", "IRL", "e_53.18-008.14", "IE"],
+			["Iran", "IRN", "e_32.58_054.27", "IR"],
+			["Iraq", "IRQ", "e_33.04_043.74", "IQ"],
+			["Iceland", "ISL", "e_65.00-018.57", "IS"],
+			["Israel", "ISR", "e_31.46_035.00", "IL"],
+			["Italy", "ITA", "e_42.80_012.07", "IT"],
+			["Jamaica", "JAM", "e_18.16-077.31", "JM"],
+			["Jersey", "JEY", "e_49.22-002.13", "JE"],
+			["Jordan", "JOR", "e_31.25_036.77", "JO"],
+			["Japan", "JPN", "e_37.59_138.03", "JP"],
+			["Kazakhstan", "KAZ", "e_48.16_067.29", "KZ"],
+			["Kenya", "KEN", "e_00.60_037.80", "KE"],
+			["Kyrgyzstan", "KGZ", "e_41.46_074.54", "KG"],
+			["Cambodia", "KHM", "e_12.72_104.91", "KH"],
+			["Kiribati", "KIR", "e_00.86-045.61", "KI"],
+			["Saint Kitts and Nevis", "KNA", "e_17.26-062.69", "KN"],
+			["Republic of Korea", "KOR", "e_36.39_127.84", "KR"],
+			["Kuwait", "KWT", "e_29.33_047.59", "KW"],
+			["Lao PDR", "LAO", "e_18.50_103.74", "LA"],
+			["Lebanon", "LBN", "e_33.92_035.88", "LB"],
+			["Liberia", "LBR", "e_06.45-009.32", "LR"],
+			["Libya", "LBY", "e_27.03_018.01", "LY"],
+			["Saint Lucia", "LCA", "e_13.89-060.97", "LC"],
+			["Liechtenstein", "LIE", "e_47.14_009.54", "LI"],
+			["Sri Lanka", "LKA", "e_07.61_080.70", "LK"],
+			["Lesotho", "LSO", "e-29.58_028.23", "LS"],
+			["Lithuania", "LTU", "e_55.33_023.89", "LT"],
+			["Luxembourg", "LUX", "e_49.77_006.07", "LU"],
+			["Latvia", "LVA", "e_56.85_024.91", "LV"],
+			["Macao", "MAC", "e_22.22_113.51", "MO"],
+			["Saint-Martin", "MAF", "e_18.09-063.06", "MF"],
+			["Morocco", "MAR", "e_29.84-008.46", "MA"],
+			["Monaco", "MCO", "e_43.75_007.41", "MC"],
+			["Moldova", "MDA", "e_47.19_028.46", "MD"],
+			["Madagascar", "MDG", "e-19.37_046.70", "MG"],
+			["Maldives", "MDV", "e_03.73_073.46", "MV"],
+			["Mexico", "MEX", "e_23.95-102.52", "MX"],
+			["Marshall Islands", "MHL", "e_07.00_170.34", "MH"],
+			["Macedonia", "MKD", "e_41.60_021.68", "MK"],
+			["Mali", "MLI", "e_17.35-003.54", "ML"],
+			["Malta", "MLT", "e_35.92_014.41", "MT"],
+			["Myanmar", "MMR", "e_21.19_096.49", "MM"],
+			["Montenegro", "MNE", "e_42.79_019.24", "ME"],
+			["Mongolia", "MNG", "e_46.83_103.05", "MN"],
+			["Northern Mariana Islands", "MNP", "e_15.83_145.62", "MP"],
+			["Mozambique", "MOZ", "e-17.27_035.53", "MZ"],
+			["Mauritania", "MRT", "e_20.26-010.35", "MR"],
+			["Montserrat", "MSR", "e_16.74-062.19", "MS"],
+			["Mauritius", "MUS", "e-20.28_057.57", "MU"],
+			["Malawi", "MWI", "e-13.22_034.29", "MW"],
+			["Malaysia", "MYS", "e_03.79_109.70", "MY"],
+			["Namibia", "NAM", "e-22.13_017.21", "NA"],
+			["New Caledonia", "NCL", "e-21.30_165.68", "NC"],
+			["Niger", "NER", "e_17.42_009.39", "NE"],
+			["Norfolk Island", "NFK", "e-29.05_167.95", "NF"],
+			["Nigeria", "NGA", "e_09.59_008.09", "NG"],
+			["Nicaragua", "NIC", "e_12.85-085.03", "NI"],
+			["Niue", "NIU", "e-19.05-169.87", "NU"],
+			["Netherlands", "NLD", "e_52.10_005.28", "NL"],
+			["Norway", "NOR", "e_68.75_015.35", "NO"],
+			["Nepal", "NPL", "e_28.25_083.92", "NP"],
+			["Nauru", "NRU", "e-00.52_166.93", "NR"],
+			["New Zealand", "NZL", "e-41.81_171.48", "NZ"],
+			["Oman", "OMN", "e_20.61_056.09", "OM"],
+			["Pakistan", "PAK", "e_29.95_069.34", "PK"],
+			["Panama", "PAN", "e_08.52-080.12", "PA"],
+			["Pitcairn Islands", "PCN", "e-24.37-128.32", "PN"],
+			["Peru", "PER", "e-09.15-074.38", "PE"],
+			["Philippines", "PHL", "e_11.78_122.88", "PH"],
+			["Palau", "PLW", "e_07.29_134.41", "PW"],
+			["Papua New Guinea", "PNG", "e-06.46_145.21", "PG"],
+			["Poland", "POL", "e_52.13_019.39", "PL"],
+			["Puerto Rico", "PRI", "e_18.23-066.47", "PR"],
+			["Dem. Rep. Korea", "PRK", "e_40.15_127.19", "KP"],
+			["Portugal", "PRT", "e_39.60-008.50", "PT"],
+			["Paraguay", "PRY", "e-23.23-058.40", "PY"],
+			["Palestine", "PSE", "e_31.92_035.20", "PS"],
+			["French Polynesia", "PYF", "e-14.72-144.90", "PF"],
+			["Qatar", "QAT", "e_25.31_051.18", "QA"],
+			["Romania", "ROU", "e_45.85_024.97", "RO"],
+			["Russian Federation", "RUS", "e_61.98_096.69", "RU"],
+			["Rwanda", "RWA", "e-01.99_029.92", "RW"],
+			["Saudi Arabia", "SAU", "e_24.12_044.54", "SA"],
+			["Sudan", "SDN", "e_15.99_029.94", "SD"],
+			["South Sudan", "SSD", "e_07.31_030.25", "SS"],
+			["Senegal", "SEN", "e_14.37-014.47", "SN"],
+			["Singapore", "SGP", "e_01.36_103.82", "SG"],
+			["South Georgia and South Sandwich Islands", "SGS", "e-54.46-036.43", "GS"],
+			["Saint Helena", "SHN", "e-12.40-009.55", "SH"],
+			["Solomon Islands", "SLB", "e-08.92_159.63", "SB"],
+			["Sierra Leone", "SLE", "e_08.56-011.79", "SL"],
+			["El Salvador", "SLV", "e_13.74-088.87", "SV"],
+			["San Marino", "SMR", "e_43.94_012.46", "SM"],
+			["Somalia", "SOM", "e_04.75_045.71", "SO"],
+			["Saint Pierre and Miquelon", "SPM", "e_46.92-056.30", "PM"],
+			["Serbia", "SRB", "e_44.22_020.79", "RS"],
+			["Sao Tome and Principe", "STP", "e_00.44_006.72", "ST"],
+			["Suriname", "SUR", "e_04.13-055.91", "SR"],
+			["Slovakia", "SVK", "e_48.71_019.48", "SK"],
+			["Slovenia", "SVN", "e_46.12_014.80", "SI"],
+			["Sweden", "SWE", "e_62.78_016.75", "SE"],
+			["Swaziland", "SWZ", "e-26.56_031.48", "SZ"],
+			["Sint Maarten", "SXM", "e_18.05-063.06", "SX"],
+			["Seychelles", "SYC", "e-04.66_055.48", "SC"],
+			["Syria", "SYR", "e_35.03_038.51", "SY"],
+			["Turks and Caicos Islands", "TCA", "e_21.83-071.97", "TC"],
+			["Chad", "TCD", "e_15.33_018.64", "TD"],
+			["Togo", "TGO", "e_08.53_000.96", "TG"],
+			["Thailand", "THA", "e_15.12_101.00", "TH"],
+			["Tajikistan", "TJK", "e_38.53_071.01", "TJ"],
+			["Turkmenistan", "TKM", "e_39.12_059.37", "TM"],
+			["Timor-Leste", "TLS", "e-08.83_125.84", "TL"],
+			["Tonga", "TON", "e-20.43-174.81", "TO"],
+			["Trinidad and Tobago", "TTO", "e_10.46-061.27", "TT"],
+			["Tunisia", "TUN", "e_34.12_009.55", "TN"],
+			["Turkey", "TUR", "e_39.06_035.17", "TR"],
+			["Tanzania", "TZA", "e-06.28_034.81", "TZ"],
+			["Uganda", "UGA", "e_01.27_032.37", "UG"],
+			["Ukraine", "UKR", "e_49.00_031.38", "UA"],
+			["Uruguay", "URY", "e-32.80-056.02", "UY"],
+			["United States", "USA", "e_45.68-112.46", "US"],
+			["Uzbekistan", "UZB", "e_41.76_063.14", "UZ"],
+			["Vatican", "VAT", "e_41.90_012.43", "VA"],
+			["Saint Vincent and the Grenadines", "VCT", "e_13.22-061.20", "VC"],
+			["Venezuela", "VEN", "e_07.12-066.18", "VE"],
+			["British Virgin Islands", "VGB", "e_18.53-064.47", "VG"],
+			["United States Virgin Islands", "VIR", "e_17.96-064.80", "VI"],
+			["Vietnam", "VNM", "e_16.65_106.30", "VN"],
+			["Vanuatu", "VUT", "e-16.23_167.69", "VU"],
+			["Wallis and Futuna Islands", "WLF", "e-13.89-177.35", "WF"],
+			["Samoa", "WSM", "e-13.75-172.16", "WS"],
+			["Yemen", "YEM", "e_15.91_047.59", "YE"],
+			["South Africa", "ZAF", "e-29.00_025.08", "ZA"],
+			["Zambia", "ZMB", "e-13.46_027.77", "ZM"],
+			["Zimbabwe", "ZWE", "e-19.00_029.85", "ZW"],
+		];
+
+		<!--
+		/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+		/* md5 implementation in JavaScript | (c) 2014-2017 Chen, Yi-Cyuan [emn178@gmail.com] xx| */
+		/* - see https://github.com/emn178/js-md5 MIT License */
+		/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+		(function () {
+			"use strict";
+
+			var ERROR = "input is invalid type";
+			var WINDOW = typeof window === "object";
+			var root = WINDOW ? window : {};
+			if (root.JS_MD5_NO_WINDOW) {
+				WINDOW = false;
+			}
+			var WEB_WORKER = !WINDOW && typeof self === "object";
+			root = self;
+			var COMMON_JS =
+				!root.JS_MD5_NO_COMMON_JS &&
+				typeof module === "object" &&
+				module.exports;
+			var AMD = typeof define === "function" && define.amd;
+			var ARRAY_BUFFER =
+				!root.JS_MD5_NO_ARRAY_BUFFER && typeof ArrayBuffer !== "undefined";
+			var HEX_CHARS = "0123456789abcdef".split("");
+			var EXTRA = [128, 32768, 8388608, -2147483648];
+			var SHIFT = [0, 8, 16, 24];
+			var OUTPUT_TYPES = [
+				"hex",
+				"array",
+				"digest",
+				"buffer",
+				"arrayBuffer",
+				"base64",
+			];
+			var BASE64_ENCODE_CHAR =
+				"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".split(
+					"",
+				);
+
+			var blocks = [],
+				buffer8;
+			if (ARRAY_BUFFER) {
+				var buffer = new ArrayBuffer(68);
+				buffer8 = new Uint8Array(buffer);
+				blocks = new Uint32Array(buffer);
+			}
+
+			if (root.JS_MD5_NO_NODE_JS || !Array.isArray) {
+				Array.isArray = function (obj) {
+					return Object.prototype.toString.call(obj) === "[object Array]";
+				};
+			}
+
+			if (
+				ARRAY_BUFFER &&
+				(root.JS_MD5_NO_ARRAY_BUFFER_IS_VIEW || !ArrayBuffer.isView)
+			) {
+				ArrayBuffer.isView = function (obj) {
+					return (
+						typeof obj === "object" &&
+						obj.buffer &&
+						obj.buffer.constructor === ArrayBuffer
+					);
+				};
+			}
+
+			var createOutputMethod = function (outputType) {
+				return function (message) {
+					return new Md5(true).update(message)[outputType]();
+				};
+			};
+
+			var createMethod = function () {
+				var method = createOutputMethod("hex");
+				method.create = function () {
+					return new Md5();
+				};
+				method.update = function (message) {
+					return method.create().update(message);
+				};
+				for (var i = 0; i < OUTPUT_TYPES.length; ++i) {
+					var type = OUTPUT_TYPES[i];
+					method[type] = createOutputMethod(type);
+				}
+				return method;
+			};
+
+			/**
+			 * Md5 class
+			 * @class Md5
+			 * @description This is internal class.
+			 * @see {@link md5.create}
+			 */
+			function Md5(sharedMemory) {
+				if (sharedMemory) {
+					blocks[0] =
+						blocks[16] =
+						blocks[1] =
+						blocks[2] =
+						blocks[3] =
+						blocks[4] =
+						blocks[5] =
+						blocks[6] =
+						blocks[7] =
+						blocks[8] =
+						blocks[9] =
+						blocks[10] =
+						blocks[11] =
+						blocks[12] =
+						blocks[13] =
+						blocks[14] =
+						blocks[15] =
+						0;
+					this.blocks = blocks;
+					this.buffer8 = buffer8;
+				} else {
+					if (ARRAY_BUFFER) {
+						var buffer = new ArrayBuffer(68);
+						this.buffer8 = new Uint8Array(buffer);
+						this.blocks = new Uint32Array(buffer);
+					} else {
+						this.blocks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+					}
+				}
+				this.h0 =
+					this.h1 =
+					this.h2 =
+					this.h3 =
+					this.start =
+					this.bytes =
+					this.hBytes =
+					0;
+				this.finalized = this.hashed = false;
+				this.first = true;
+			}
+
+			/**
+			 * @method update
+			 * @memberof Md5
+			 * @instance
+			 * @description Update hash
+			 * @param {String|Array|Uint8Array|ArrayBuffer} message message to hash
+			 * @returns {Md5} Md5 object.
+			 * @see {@link md5.update}
+			 */
+			Md5.prototype.update = function (message) {
+				if (this.finalized) {
+					return;
+				}
+
+				var notString,
+					type = typeof message;
+				if (type !== "string") {
+					if (type === "object") {
+						if (message === null) {
+							throw ERROR;
+						} else if (ARRAY_BUFFER && message.constructor === ArrayBuffer) {
+							message = new Uint8Array(message);
+						} else if (!Array.isArray(message)) {
+							if (!ARRAY_BUFFER || !ArrayBuffer.isView(message)) {
+								throw ERROR;
+							}
+						}
+					} else {
+						throw ERROR;
+					}
+					notString = true;
+				}
+				var code,
+					index = 0,
+					i,
+					length = message.length,
+					blocks = this.blocks;
+				var buffer8 = this.buffer8;
+
+				while (index < length) {
+					if (this.hashed) {
+						this.hashed = false;
+						blocks[0] = blocks[16];
+						blocks[16] =
+							blocks[1] =
+							blocks[2] =
+							blocks[3] =
+							blocks[4] =
+							blocks[5] =
+							blocks[6] =
+							blocks[7] =
+							blocks[8] =
+							blocks[9] =
+							blocks[10] =
+							blocks[11] =
+							blocks[12] =
+							blocks[13] =
+							blocks[14] =
+							blocks[15] =
+							0;
+					}
+
+					if (notString) {
+						if (ARRAY_BUFFER) {
+							for (i = this.start; index < length && i < 64; ++index) {
+								buffer8[i++] = message[index];
+							}
+						} else {
+							for (i = this.start; index < length && i < 64; ++index) {
+								blocks[i >> 2] |= message[index] << SHIFT[i++ & 3];
+							}
+						}
+					} else {
+						if (ARRAY_BUFFER) {
+							for (i = this.start; index < length && i < 64; ++index) {
+								code = message.charCodeAt(index);
+								if (code < 0x80) {
+									buffer8[i++] = code;
+								} else if (code < 0x800) {
+									buffer8[i++] = 0xc0 | (code >> 6);
+									buffer8[i++] = 0x80 | (code & 0x3f);
+								} else if (code < 0xd800 || code >= 0xe000) {
+									buffer8[i++] = 0xe0 | (code >> 12);
+									buffer8[i++] = 0x80 | ((code >> 6) & 0x3f);
+									buffer8[i++] = 0x80 | (code & 0x3f);
+								} else {
+									code =
+										0x10000 +
+										(((code & 0x3ff) << 10) |
+											(message.charCodeAt(++index) & 0x3ff));
+									buffer8[i++] = 0xf0 | (code >> 18);
+									buffer8[i++] = 0x80 | ((code >> 12) & 0x3f);
+									buffer8[i++] = 0x80 | ((code >> 6) & 0x3f);
+									buffer8[i++] = 0x80 | (code & 0x3f);
+								}
+							}
+						} else {
+							for (i = this.start; index < length && i < 64; ++index) {
+								code = message.charCodeAt(index);
+								if (code < 0x80) {
+									blocks[i >> 2] |= code << SHIFT[i++ & 3];
+								} else if (code < 0x800) {
+									blocks[i >> 2] |= (0xc0 | (code >> 6)) << SHIFT[i++ & 3];
+									blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+								} else if (code < 0xd800 || code >= 0xe000) {
+									blocks[i >> 2] |= (0xe0 | (code >> 12)) << SHIFT[i++ & 3];
+									blocks[i >> 2] |=
+										(0x80 | ((code >> 6) & 0x3f)) << SHIFT[i++ & 3];
+									blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+								} else {
+									code =
+										0x10000 +
+										(((code & 0x3ff) << 10) |
+											(message.charCodeAt(++index) & 0x3ff));
+									blocks[i >> 2] |= (0xf0 | (code >> 18)) << SHIFT[i++ & 3];
+									blocks[i >> 2] |=
+										(0x80 | ((code >> 12) & 0x3f)) << SHIFT[i++ & 3];
+									blocks[i >> 2] |=
+										(0x80 | ((code >> 6) & 0x3f)) << SHIFT[i++ & 3];
+									blocks[i >> 2] |= (0x80 | (code & 0x3f)) << SHIFT[i++ & 3];
+								}
+							}
+						}
+					}
+					this.lastByteIndex = i;
+					this.bytes += i - this.start;
+					if (i >= 64) {
+						this.start = i - 64;
+						this.hash();
+						this.hashed = true;
+					} else {
+						this.start = i;
+					}
+				}
+				if (this.bytes > 4294967295) {
+					this.hBytes += (this.bytes / 4294967296) << 0;
+					this.bytes = this.bytes % 4294967296;
+				}
+				return this;
+			};
+
+			Md5.prototype.finalize = function () {
+				if (this.finalized) {
+					return;
+				}
+				this.finalized = true;
+				var blocks = this.blocks,
+					i = this.lastByteIndex;
+				blocks[i >> 2] |= EXTRA[i & 3];
+				if (i >= 56) {
+					if (!this.hashed) {
+						this.hash();
+					}
+					blocks[0] = blocks[16];
+					blocks[16] =
+						blocks[1] =
+						blocks[2] =
+						blocks[3] =
+						blocks[4] =
+						blocks[5] =
+						blocks[6] =
+						blocks[7] =
+						blocks[8] =
+						blocks[9] =
+						blocks[10] =
+						blocks[11] =
+						blocks[12] =
+						blocks[13] =
+						blocks[14] =
+						blocks[15] =
+						0;
+				}
+				blocks[14] = this.bytes << 3;
+				blocks[15] = (this.hBytes << 3) | (this.bytes >>> 29);
+				this.hash();
+			};
+
+			Md5.prototype.hash = function () {
+				var a,
+					b,
+					c,
+					d,
+					bc,
+					da,
+					blocks = this.blocks;
+
+				if (this.first) {
+					a = blocks[0] - 680876937;
+					a = (((a << 7) | (a >>> 25)) - 271733879) << 0;
+					d = (-1732584194 ^ (a & 2004318071)) + blocks[1] - 117830708;
+					d = (((d << 12) | (d >>> 20)) + a) << 0;
+					c = (-271733879 ^ (d & (a ^ -271733879))) + blocks[2] - 1126478375;
+					c = (((c << 17) | (c >>> 15)) + d) << 0;
+					b = (a ^ (c & (d ^ a))) + blocks[3] - 1316259209;
+					b = (((b << 22) | (b >>> 10)) + c) << 0;
+				} else {
+					a = this.h0;
+					b = this.h1;
+					c = this.h2;
+					d = this.h3;
+					a += (d ^ (b & (c ^ d))) + blocks[0] - 680876936;
+					a = (((a << 7) | (a >>> 25)) + b) << 0;
+					d += (c ^ (a & (b ^ c))) + blocks[1] - 389564586;
+					d = (((d << 12) | (d >>> 20)) + a) << 0;
+					c += (b ^ (d & (a ^ b))) + blocks[2] + 606105819;
+					c = (((c << 17) | (c >>> 15)) + d) << 0;
+					b += (a ^ (c & (d ^ a))) + blocks[3] - 1044525330;
+					b = (((b << 22) | (b >>> 10)) + c) << 0;
+				}
+
+				a += (d ^ (b & (c ^ d))) + blocks[4] - 176418897;
+				a = (((a << 7) | (a >>> 25)) + b) << 0;
+				d += (c ^ (a & (b ^ c))) + blocks[5] + 1200080426;
+				d = (((d << 12) | (d >>> 20)) + a) << 0;
+				c += (b ^ (d & (a ^ b))) + blocks[6] - 1473231341;
+				c = (((c << 17) | (c >>> 15)) + d) << 0;
+				b += (a ^ (c & (d ^ a))) + blocks[7] - 45705983;
+				b = (((b << 22) | (b >>> 10)) + c) << 0;
+				a += (d ^ (b & (c ^ d))) + blocks[8] + 1770035416;
+				a = (((a << 7) | (a >>> 25)) + b) << 0;
+				d += (c ^ (a & (b ^ c))) + blocks[9] - 1958414417;
+				d = (((d << 12) | (d >>> 20)) + a) << 0;
+				c += (b ^ (d & (a ^ b))) + blocks[10] - 42063;
+				c = (((c << 17) | (c >>> 15)) + d) << 0;
+				b += (a ^ (c & (d ^ a))) + blocks[11] - 1990404162;
+				b = (((b << 22) | (b >>> 10)) + c) << 0;
+				a += (d ^ (b & (c ^ d))) + blocks[12] + 1804603682;
+				a = (((a << 7) | (a >>> 25)) + b) << 0;
+				d += (c ^ (a & (b ^ c))) + blocks[13] - 40341101;
+				d = (((d << 12) | (d >>> 20)) + a) << 0;
+				c += (b ^ (d & (a ^ b))) + blocks[14] - 1502002290;
+				c = (((c << 17) | (c >>> 15)) + d) << 0;
+				b += (a ^ (c & (d ^ a))) + blocks[15] + 1236535329;
+				b = (((b << 22) | (b >>> 10)) + c) << 0;
+				a += (c ^ (d & (b ^ c))) + blocks[1] - 165796510;
+				a = (((a << 5) | (a >>> 27)) + b) << 0;
+				d += (b ^ (c & (a ^ b))) + blocks[6] - 1069501632;
+				d = (((d << 9) | (d >>> 23)) + a) << 0;
+				c += (a ^ (b & (d ^ a))) + blocks[11] + 643717713;
+				c = (((c << 14) | (c >>> 18)) + d) << 0;
+				b += (d ^ (a & (c ^ d))) + blocks[0] - 373897302;
+				b = (((b << 20) | (b >>> 12)) + c) << 0;
+				a += (c ^ (d & (b ^ c))) + blocks[5] - 701558691;
+				a = (((a << 5) | (a >>> 27)) + b) << 0;
+				d += (b ^ (c & (a ^ b))) + blocks[10] + 38016083;
+				d = (((d << 9) | (d >>> 23)) + a) << 0;
+				c += (a ^ (b & (d ^ a))) + blocks[15] - 660478335;
+				c = (((c << 14) | (c >>> 18)) + d) << 0;
+				b += (d ^ (a & (c ^ d))) + blocks[4] - 405537848;
+				b = (((b << 20) | (b >>> 12)) + c) << 0;
+				a += (c ^ (d & (b ^ c))) + blocks[9] + 568446438;
+				a = (((a << 5) | (a >>> 27)) + b) << 0;
+				d += (b ^ (c & (a ^ b))) + blocks[14] - 1019803690;
+				d = (((d << 9) | (d >>> 23)) + a) << 0;
+				c += (a ^ (b & (d ^ a))) + blocks[3] - 187363961;
+				c = (((c << 14) | (c >>> 18)) + d) << 0;
+				b += (d ^ (a & (c ^ d))) + blocks[8] + 1163531501;
+				b = (((b << 20) | (b >>> 12)) + c) << 0;
+				a += (c ^ (d & (b ^ c))) + blocks[13] - 1444681467;
+				a = (((a << 5) | (a >>> 27)) + b) << 0;
+				d += (b ^ (c & (a ^ b))) + blocks[2] - 51403784;
+				d = (((d << 9) | (d >>> 23)) + a) << 0;
+				c += (a ^ (b & (d ^ a))) + blocks[7] + 1735328473;
+				c = (((c << 14) | (c >>> 18)) + d) << 0;
+				b += (d ^ (a & (c ^ d))) + blocks[12] - 1926607734;
+				b = (((b << 20) | (b >>> 12)) + c) << 0;
+				bc = b ^ c;
+				a += (bc ^ d) + blocks[5] - 378558;
+				a = (((a << 4) | (a >>> 28)) + b) << 0;
+				d += (bc ^ a) + blocks[8] - 2022574463;
+				d = (((d << 11) | (d >>> 21)) + a) << 0;
+				da = d ^ a;
+				c += (da ^ b) + blocks[11] + 1839030562;
+				c = (((c << 16) | (c >>> 16)) + d) << 0;
+				b += (da ^ c) + blocks[14] - 35309556;
+				b = (((b << 23) | (b >>> 9)) + c) << 0;
+				bc = b ^ c;
+				a += (bc ^ d) + blocks[1] - 1530992060;
+				a = (((a << 4) | (a >>> 28)) + b) << 0;
+				d += (bc ^ a) + blocks[4] + 1272893353;
+				d = (((d << 11) | (d >>> 21)) + a) << 0;
+				da = d ^ a;
+				c += (da ^ b) + blocks[7] - 155497632;
+				c = (((c << 16) | (c >>> 16)) + d) << 0;
+				b += (da ^ c) + blocks[10] - 1094730640;
+				b = (((b << 23) | (b >>> 9)) + c) << 0;
+				bc = b ^ c;
+				a += (bc ^ d) + blocks[13] + 681279174;
+				a = (((a << 4) | (a >>> 28)) + b) << 0;
+				d += (bc ^ a) + blocks[0] - 358537222;
+				d = (((d << 11) | (d >>> 21)) + a) << 0;
+				da = d ^ a;
+				c += (da ^ b) + blocks[3] - 722521979;
+				c = (((c << 16) | (c >>> 16)) + d) << 0;
+				b += (da ^ c) + blocks[6] + 76029189;
+				b = (((b << 23) | (b >>> 9)) + c) << 0;
+				bc = b ^ c;
+				a += (bc ^ d) + blocks[9] - 640364487;
+				a = (((a << 4) | (a >>> 28)) + b) << 0;
+				d += (bc ^ a) + blocks[12] - 421815835;
+				d = (((d << 11) | (d >>> 21)) + a) << 0;
+				da = d ^ a;
+				c += (da ^ b) + blocks[15] + 530742520;
+				c = (((c << 16) | (c >>> 16)) + d) << 0;
+				b += (da ^ c) + blocks[2] - 995338651;
+				b = (((b << 23) | (b >>> 9)) + c) << 0;
+				a += (c ^ (b | ~d)) + blocks[0] - 198630844;
+				a = (((a << 6) | (a >>> 26)) + b) << 0;
+				d += (b ^ (a | ~c)) + blocks[7] + 1126891415;
+				d = (((d << 10) | (d >>> 22)) + a) << 0;
+				c += (a ^ (d | ~b)) + blocks[14] - 1416354905;
+				c = (((c << 15) | (c >>> 17)) + d) << 0;
+				b += (d ^ (c | ~a)) + blocks[5] - 57434055;
+				b = (((b << 21) | (b >>> 11)) + c) << 0;
+				a += (c ^ (b | ~d)) + blocks[12] + 1700485571;
+				a = (((a << 6) | (a >>> 26)) + b) << 0;
+				d += (b ^ (a | ~c)) + blocks[3] - 1894986606;
+				d = (((d << 10) | (d >>> 22)) + a) << 0;
+				c += (a ^ (d | ~b)) + blocks[10] - 1051523;
+				c = (((c << 15) | (c >>> 17)) + d) << 0;
+				b += (d ^ (c | ~a)) + blocks[1] - 2054922799;
+				b = (((b << 21) | (b >>> 11)) + c) << 0;
+				a += (c ^ (b | ~d)) + blocks[8] + 1873313359;
+				a = (((a << 6) | (a >>> 26)) + b) << 0;
+				d += (b ^ (a | ~c)) + blocks[15] - 30611744;
+				d = (((d << 10) | (d >>> 22)) + a) << 0;
+				c += (a ^ (d | ~b)) + blocks[6] - 1560198380;
+				c = (((c << 15) | (c >>> 17)) + d) << 0;
+				b += (d ^ (c | ~a)) + blocks[13] + 1309151649;
+				b = (((b << 21) | (b >>> 11)) + c) << 0;
+				a += (c ^ (b | ~d)) + blocks[4] - 145523070;
+				a = (((a << 6) | (a >>> 26)) + b) << 0;
+				d += (b ^ (a | ~c)) + blocks[11] - 1120210379;
+				d = (((d << 10) | (d >>> 22)) + a) << 0;
+				c += (a ^ (d | ~b)) + blocks[2] + 718787259;
+				c = (((c << 15) | (c >>> 17)) + d) << 0;
+				b += (d ^ (c | ~a)) + blocks[9] - 343485551;
+				b = (((b << 21) | (b >>> 11)) + c) << 0;
+
+				if (this.first) {
+					this.h0 = (a + 1732584193) << 0;
+					this.h1 = (b - 271733879) << 0;
+					this.h2 = (c - 1732584194) << 0;
+					this.h3 = (d + 271733878) << 0;
+					this.first = false;
+				} else {
+					this.h0 = (this.h0 + a) << 0;
+					this.h1 = (this.h1 + b) << 0;
+					this.h2 = (this.h2 + c) << 0;
+					this.h3 = (this.h3 + d) << 0;
+				}
+			};
+
+			/**
+			 * @method hex
+			 * @memberof Md5
+			 * @instance
+			 * @description Output hash as hex string
+			 * @returns {String} Hex string
+			 * @see {@link md5.hex}
+			 * @example
+			 * hash.hex();
+			 */
+			Md5.prototype.hex = function () {
+				this.finalize();
+
+				var h0 = this.h0,
+					h1 = this.h1,
+					h2 = this.h2,
+					h3 = this.h3;
+
+				return (
+					HEX_CHARS[(h0 >> 4) & 0x0f] +
+					HEX_CHARS[h0 & 0x0f] +
+					HEX_CHARS[(h0 >> 12) & 0x0f] +
+					HEX_CHARS[(h0 >> 8) & 0x0f] +
+					HEX_CHARS[(h0 >> 20) & 0x0f] +
+					HEX_CHARS[(h0 >> 16) & 0x0f] +
+					HEX_CHARS[(h0 >> 28) & 0x0f] +
+					HEX_CHARS[(h0 >> 24) & 0x0f] +
+					HEX_CHARS[(h1 >> 4) & 0x0f] +
+					HEX_CHARS[h1 & 0x0f] +
+					HEX_CHARS[(h1 >> 12) & 0x0f] +
+					HEX_CHARS[(h1 >> 8) & 0x0f] +
+					HEX_CHARS[(h1 >> 20) & 0x0f] +
+					HEX_CHARS[(h1 >> 16) & 0x0f] +
+					HEX_CHARS[(h1 >> 28) & 0x0f] +
+					HEX_CHARS[(h1 >> 24) & 0x0f] +
+					HEX_CHARS[(h2 >> 4) & 0x0f] +
+					HEX_CHARS[h2 & 0x0f] +
+					HEX_CHARS[(h2 >> 12) & 0x0f] +
+					HEX_CHARS[(h2 >> 8) & 0x0f] +
+					HEX_CHARS[(h2 >> 20) & 0x0f] +
+					HEX_CHARS[(h2 >> 16) & 0x0f] +
+					HEX_CHARS[(h2 >> 28) & 0x0f] +
+					HEX_CHARS[(h2 >> 24) & 0x0f] +
+					HEX_CHARS[(h3 >> 4) & 0x0f] +
+					HEX_CHARS[h3 & 0x0f] +
+					HEX_CHARS[(h3 >> 12) & 0x0f] +
+					HEX_CHARS[(h3 >> 8) & 0x0f] +
+					HEX_CHARS[(h3 >> 20) & 0x0f] +
+					HEX_CHARS[(h3 >> 16) & 0x0f] +
+					HEX_CHARS[(h3 >> 28) & 0x0f] +
+					HEX_CHARS[(h3 >> 24) & 0x0f]
+				);
+			};
+
+			/**
+			 * @method toString
+			 * @memberof Md5
+			 * @instance
+			 * @description Output hash as hex string
+			 * @returns {String} Hex string
+			 * @see {@link md5.hex}
+			 * @example
+			 * hash.toString();
+			 */
+			Md5.prototype.toString = Md5.prototype.hex;
+
+			/**
+			 * @method digest
+			 * @memberof Md5
+			 * @instance
+			 * @description Output hash as bytes array
+			 * @returns {Array} Bytes array
+			 * @see {@link md5.digest}
+			 * @example
+			 * hash.digest();
+			 */
+			Md5.prototype.digest = function () {
+				this.finalize();
+
+				var h0 = this.h0,
+					h1 = this.h1,
+					h2 = this.h2,
+					h3 = this.h3;
+				return [
+					h0 & 0xff,
+					(h0 >> 8) & 0xff,
+					(h0 >> 16) & 0xff,
+					(h0 >> 24) & 0xff,
+					h1 & 0xff,
+					(h1 >> 8) & 0xff,
+					(h1 >> 16) & 0xff,
+					(h1 >> 24) & 0xff,
+					h2 & 0xff,
+					(h2 >> 8) & 0xff,
+					(h2 >> 16) & 0xff,
+					(h2 >> 24) & 0xff,
+					h3 & 0xff,
+					(h3 >> 8) & 0xff,
+					(h3 >> 16) & 0xff,
+					(h3 >> 24) & 0xff,
+				];
+			};
+
+			/**
+			 * @method array
+			 * @memberof Md5
+			 * @instance
+			 * @description Output hash as bytes array
+			 * @returns {Array} Bytes array
+			 * @see {@link md5.array}
+			 * @example
+			 * hash.array();
+			 */
+			Md5.prototype.array = Md5.prototype.digest;
+
+			/**
+			 * @method arrayBuffer
+			 * @memberof Md5
+			 * @instance
+			 * @description Output hash as ArrayBuffer
+			 * @returns {ArrayBuffer} ArrayBuffer
+			 * @see {@link md5.arrayBuffer}
+			 * @example
+			 * hash.arrayBuffer();
+			 */
+			Md5.prototype.arrayBuffer = function () {
+				this.finalize();
+
+				var buffer = new ArrayBuffer(16);
+				var blocks = new Uint32Array(buffer);
+				blocks[0] = this.h0;
+				blocks[1] = this.h1;
+				blocks[2] = this.h2;
+				blocks[3] = this.h3;
+				return buffer;
+			};
+
+			/**
+			 * @method buffer
+			 * @deprecated This maybe confuse with Buffer in node.js. Please use arrayBuffer instead.
+			 * @memberof Md5
+			 * @instance
+			 * @description Output hash as ArrayBuffer
+			 * @returns {ArrayBuffer} ArrayBuffer
+			 * @see {@link md5.buffer}
+			 * @example
+			 * hash.buffer();
+			 */
+			Md5.prototype.buffer = Md5.prototype.arrayBuffer;
+
+			/**
+			 * @method base64
+			 * @memberof Md5
+			 * @instance
+			 * @description Output hash as base64 string
+			 * @returns {String} base64 string
+			 * @see {@link md5.base64}
+			 * @example
+			 * hash.base64();
+			 */
+			Md5.prototype.base64 = function () {
+				var v1,
+					v2,
+					v3,
+					base64Str = "",
+					bytes = this.array();
+				for (var i = 0; i < 15;) {
+					v1 = bytes[i++];
+					v2 = bytes[i++];
+					v3 = bytes[i++];
+					base64Str +=
+						BASE64_ENCODE_CHAR[v1 >>> 2] +
+						BASE64_ENCODE_CHAR[((v1 << 4) | (v2 >>> 4)) & 63] +
+						BASE64_ENCODE_CHAR[((v2 << 2) | (v3 >>> 6)) & 63] +
+						BASE64_ENCODE_CHAR[v3 & 63];
+				}
+				v1 = bytes[i];
+				base64Str +=
+					BASE64_ENCODE_CHAR[v1 >>> 2] + BASE64_ENCODE_CHAR[(v1 << 4) & 63];
+				return base64Str;
+			};
+
+			var exports = createMethod();
+
+			if (COMMON_JS) {
+				module.exports = exports;
+			} else {
+				/**
+				 * @method md5
+				 * @description Md5 hash function, export to global in browsers.
+				 * @param {String|Array|Uint8Array|ArrayBuffer} message message to hash
+				 * @returns {String} md5 hashes
+				 * @example
+				 * md5(''); // d41d8cd98f00b204e9800998ecf8427e
+				 * md5('The quick brown fox jumps over the lazy dog'); // 9e107d9d372bb6826bd81d3542a419d6
+				 * md5('The quick brown fox jumps over the lazy dog.'); // e4d909c290d0fb1ca068ffaddf22cbd0
+				 *
+				 * // It also supports UTF-8 encoding
+				 * md5('中文'); // a7bac2239fcdcb3a067903d8077c4a07
+				 *
+				 * // It also supports byte `Array`, `Uint8Array`, `ArrayBuffer`
+				 * md5([]); // d41d8cd98f00b204e9800998ecf8427e
+				 * md5(new Uint8Array([])); // d41d8cd98f00b204e9800998ecf8427e
+				 */
+				root.md5 = exports;
+				if (AMD) {
+					define(function () {
+						return exports;
+					});
+				}
+			}
+		})();
+
+		/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+		/* Utf8 class: encode / decode between multi-byte Unicode characters and UTF-8 multiple */
+		/* single-byte character encoding (c) Chris Veness 2002-2010 */
+		/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+		var Utf8 = {}; // Utf8 namespace
+
+		/**
+		 * Encode multi-byte Unicode string into utf-8 multiple single-byte characters
+		 * (BMP / basic multilingual plane only)
+		 *
+		 * Chars in range U+0080 - U+07FF are encoded in 2 chars, U+0800 - U+FFFF in 3 chars
+		 *
+		 * @param {String} strUni Unicode string to be encoded as UTF-8
+		 * @returns {String} encoded string
+		 */
+		Utf8.encode = function (strUni) {
+			// use regular expressions & String.replace callback function for better efficiency
+			// than procedural approaches
+			var strUtf = strUni.replace(
+				/[\u0080-\u07ff]/g, // U+0080 - U+07FF => 2 bytes 110yyyyy, 10zzzzzz
+				function (c) {
+					var cc = c.charCodeAt(0);
+					return String.fromCharCode(0xc0 | (cc >> 6), 0x80 | (cc & 0x3f));
+				},
+			);
+			strUtf = strUtf.replace(
+				/[\u0800-\uffff]/g, // U+0800 - U+FFFF => 3 bytes 1110xxxx, 10yyyyyy, 10zzzzzz
+				function (c) {
+					var cc = c.charCodeAt(0);
+					return String.fromCharCode(
+						0xe0 | (cc >> 12),
+						0x80 | ((cc >> 6) & 0x3f),
+						0x80 | (cc & 0x3f),
+					);
+				},
+			);
+			return strUtf;
+		};
+
+		/**
+		 * Decode utf-8 encoded string back into multi-byte Unicode characters
+		 *
+		 * @param {String} strUtf UTF-8 string to be decoded back to Unicode
+		 * @returns {String} decoded string
+		 */
+		Utf8.decode = function (strUtf) {
+			// note: decode 3-byte chars first as decoded 2-byte strings could appear to be 3-byte char!
+			var strUni = strUtf.replace(
+				/[\u00e0-\u00ef][\u0080-\u00bf][\u0080-\u00bf]/g, // 3-byte chars
+				function (c) {
+					// (note parentheses for precence)
+					var cc =
+						((c.charCodeAt(0) & 0x0f) << 12) |
+						((c.charCodeAt(1) & 0x3f) << 6) |
+						(c.charCodeAt(2) & 0x3f);
+					return String.fromCharCode(cc);
+				},
+			);
+			strUni = strUni.replace(
+				/[\u00c0-\u00df][\u0080-\u00bf]/g, // 2-byte chars
+				function (c) {
+					// (note parentheses for precence)
+					var cc = ((c.charCodeAt(0) & 0x1f) << 6) | (c.charCodeAt(1) & 0x3f);
+					return String.fromCharCode(cc);
+				},
+			);
+			return strUni;
+		};
+		/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+		// Copyright (c) 2012 Michele Bini
+
+		// This program is free software: you can redistribute it and/or modify
+		// it under the terms of the version 3 of the GNU General Public License
+		// as published by the Free Software Foundation.
+
+		// This program is distributed in the hope that it will be useful, but
+		// WITHOUT ANY WARRANTY; without even the implied warranty of
+		// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+		// General Public License for more details.
+
+		// You should have received a copy of the GNU General Public License
+		// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+		function emptyElement(e) {
+			while (e.firstChild !== null) e.removeChild(e.firstChild);
+		}
+
+		function insertElementAfter(e, w) {
+			w.parentNode.insertBefore(e, w.nextSibling);
+		}
+
+		function setTextContent(element, text) {
+			emptyElement(element);
+			if (text != null) {
+				var node = document.createTextNode(text);
+				element.appendChild(node);
+			}
+		}
+
+		function documentElement(id) {
+			return document.getElementById(id);
+		}
+
+		function setMessageAfterElement(elementName, message) {
+			var msgid = elementName + ".msg";
+			var msg = documentElement(msgid);
+			if (msg == null) {
+				msg = document.createElement("span");
+				msg.className = "message";
+				documentElement(elementName).parentNode.appendChild(msg);
+				msg.id = msgid;
+			}
+			setTextContent(msg, message);
+		}
+
+		function resetform() {
+			try {
+				if (!confirm("Do you really want to reset the form?")) return false;
+				documentElement("firstname").value = "";
+				documentElement("lastname").value = "";
+				documentElement("day").value = "";
+				documentElement("month").value = "";
+				documentElement("year").value = "";
+				documentElement("country").value = "";
+				documentElement("udid4").value = "";
+				documentElement("tohash").value = "";
+				documentElement("urn").textContent = "";
+				setMessageAfterElement("firstname");
+				setMessageAfterElement("lastname");
+				setMessageAfterElement("day");
+				setMessageAfterElement("country");
+				documentElement("generated").className = "hidden";
+				return false;
+			} catch (err) {
+				alert("An error occurred: " + err.message);
+				return false;
+			}
+		}
+
+		function normalizeSpaces(n) {
+			n = n.replace(/^\s\s*/, "");
+			n = n.replace(/\s\s*$/, "");
+			n = n.replace(/\s\s*/g, " ");
+			return n;
+		}
+
+		function addoption(x, o) {
+			try {
+				// for IE earlier than version 8
+				x.add(o, x.options[null]);
+			} catch (e) {
+				x.add(o, null);
+			}
+		}
+
+
+		function generateudid2() {
+			var no_focusing = false; // Set this in json callbacks, so we don't change focus asynchronously from user input
+			var to_focus = null;
+
+			var foc = function (id) {
+				if (to_focus == null) to_focus = documentElement(id);
+			};
+
+			/* MRZ-transliterate(), § 2 de draft-foopgp-urn-eid-00 : décomposer
+			   decompose to NFD, strip combining marks (category Mn), upper-case,
+			   keep [A-Z] only. Deliberately WITHOUT any national convention:
+			   "Muller", not "MUELLER". ICAO 9303 only *recommends* a table, and
+			   offers up to three forms per character, so the spec picks one —
+			   hence the rebuilt line being shown to the user for review. */
+			var mrzTranslit = function (s) {
+				return s.normalize("NFD").replace(/\p{Mn}/gu, "")
+					.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 32);
+			};
+
+			/* Split BEFORE transliterating (§ 4.2.1 step 2): the hyphen stays a
+			   component boundary even though it is stripped straight after. */
+			var mrzComponents = function (value) {
+				return normalizeSpaces(value || "")
+					.split(/[^\p{L}\p{N}]+/u)
+					.map(mrzTranslit)
+					.filter(function (c) { return c !== ""; });
+			};
+
+			var checkfirstname = function (id) {
+				var parts = mrzComponents(documentElement(id).value);
+				if (!parts.length) {
+					setMessageAfterElement(id, t_msg.givenNeeded);
+					foc(id);
+					return null;
+				}
+				setMessageAfterElement(id);
+				return parts[0] + "<" + (parts[1] || "") + "<";
+			};
+
+			var checklastname = function (id) {
+				var parts = mrzComponents(documentElement(id).value);
+				if (!parts.length) {
+					setMessageAfterElement(id, t_msg.surnameNeeded);
+					foc(id);
+					return null;
+				}
+				setMessageAfterElement(id);
+				return parts[parts.length - 1];   // § 4.2.1 : le DERNIER composant
+			};
+
+			var firstname = checkfirstname("firstname");
+			var lastname = checklastname("lastname");
+
+			// Three controls again. The browser constrains the spin boxes; what
+			// is left is completeness, the range the spec cares about, and days
+			// that do not exist in that month.
+			var date = null;
+			var day = documentElement("day").value;
+			var month = documentElement("month").value;
+			var year = documentElement("year").value;
+			var tomorrow = new Date();
+			tomorrow.setDate(tomorrow.getDate() + 1);
+
+			if (day === "" || month === "" || year === "") {
+				setMessageAfterElement("day", t_msg.incomplete);
+				foc(day === "" ? "day" : (month === "" ? "month" : "year"));
+			} else if (!/^[0-9]{4}$/.test(year) || year < 1880 || year > tomorrow.getFullYear()) {
+				setMessageAfterElement("day",
+					t_msg.yearRange.replace("%s", tomorrow.getFullYear()));
+				foc("year");
+			} else {
+				var d = new Date(year, month - 1, day);
+				d.setFullYear(year);                       // années < 100
+				if (d.getDate() != day || d.getMonth() != month - 1
+				    || d.getFullYear() != year || d > tomorrow) {
+					setMessageAfterElement("day", t_msg.invalidDate);
+					foc("day");
+				} else {
+					setMessageAfterElement("day");
+					date = year + "-" + month + "-" + String(day).padStart(2, "0");
+				}
+			}
+
+			var ll = countryCoord(documentElement("country").value);
+			if (ll === "") {
+				setMessageAfterElement("country", t_msg.pickCountry);
+				foc("country");
+			} else {
+				setMessageAfterElement("country");
+			}
+
+			if (
+				firstname !== null &&
+				lastname !== null &&
+				ll !== "" &&
+				date !== null
+			) {
+				documentElement("generated").className = "";
+				documentElement("tohash").value =
+					lastname + "<<" + firstname + date;
+				// The country table already stores a full coord14, leading "e"
+				// included — do NOT prepend another one. And the standard form
+				// glues the variant tag: "u4…", not "udid4=…".
+				documentElement("udid4").value =
+					"u4" +
+					md5
+						.base64(lastname + "<<" + firstname + date)
+						.replace(/[+]/g, "-")
+						.replace(/[/]/g, "_") +
+					ll;
+				documentElement("urn").textContent =
+					"urn:eid:" + documentElement("udid4").value;
+				documentElement("udid4").scrollIntoView(false);
+				documentElement("tohash").readOnly = true;
+				documentElement("udid4").readOnly = true;
+				return true;
+			} else {
+				documentElement("generated").className = "hidden";
+				documentElement("tohash").readOnly = false;
+				documentElement("udid4").readOnly = false;
+				documentElement("tohash").value = "";
+				documentElement("udid4").value = "";
+				if (!no_focusing) {
+					if (to_focus !== null) {
+						to_focus.focus();
+					}
+				}
+				return false;
+			}
+		}
+
+	</script>
+
+	<style type="text/css">
+		body {
+			background-color: #2c284b;
+			font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+			color: #f4f7fc;
+			text-align: center;
+			margin: 0;
+			padding: 0;
+			margin-bottom: 20px;
+		}
+
+		h1,
+		h2,
+		h3 {
+			color: #ff7f00;
+			margin-top: 1em;
+			font-weight: 700;
+		}
+
+		/* Same scale as /eid/u5/ */
+		/* Side padding: without it the title touches both edges on a phone. */
+		h1 { font-size: 1.7em; padding: 0 0.7em; }
+		h2 { font-size: 1.3em; }
+		h3 { font-size: 1.15em; }
+
+		.info {
+			color: #f4f7fc;
+			font-size: 0.9em;
+			margin-top: 1em;
+		}
+
+		.centered {
+			display: inline-block;
+			padding: 2em;
+			background-color: #3f3757;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+			margin-top: 2em;
+			max-width: 700px;
+			width: 90%;
+		}
+
+		/* Label ABOVE the field: the two-column table squeezed everything on a
+		   phone. Same grammar as /eid/u5/. */
+		.field {
+			text-align: left;
+			margin-bottom: 1.2em;
+		}
+
+		label.f {
+			display: block;
+			font-size: 0.95em;
+			color: #b9b3d0;
+			margin-bottom: 0.35em;
+		}
+
+		.field input,
+		.field select {
+			width: 100%;
+			box-sizing: border-box;
+			margin-bottom: 0;
+		}
+
+		input,
+		select {
+			width: 100%;
+			padding: 0.8em;
+			font-size: 1em;
+			border-radius: 4px;
+			border: 1px solid #ddd;
+			margin-bottom: 1em;
+			background-color: #2c284b;
+			color: #f4f7fc;
+		}
+
+		input[type="button"],
+		input[type="submit"] {
+			background-color: #ff7f00;
+			color: white;
+			font-weight: bold;
+			cursor: pointer;
+			transition: background-color 0.3s;
+		}
+
+		input[type="button"]:hover,
+		input[type="submit"]:hover {
+			background-color: #e06d00;
+		}
+
+		/* Same understated rendering as /eid/u5/. */
+		.urn {
+			font-family: monospace;
+			font-size: 0.82em;
+			color: #b9b3d0;
+			margin-top: 1em;
+			word-break: break-all;
+		}
+
+		/* Understated: small and grey, above the rebuilt line. */
+		.mrzcheck {
+			max-width: 34em;
+			margin: 1.2em auto 0.5em auto;
+			font-size: 0.82em;
+			line-height: 1.45;
+			color: #b9b3d0;
+			text-align: left;
+		}
+
+		button.copy {
+			width: auto;
+			margin-top: 1em;
+			padding: 0.6em 1.6em;
+			font-size: 1em;
+			font-weight: bold;
+			font-family: inherit;
+			cursor: pointer;
+			border: 1px solid #ff7f00;
+			border-radius: 4px;
+			background-color: #ff7f00;
+			color: #2c284b;
+		}
+
+		button.copy:hover {
+			background-color: #ffa040;
+		}
+
+		.secondary {
+			background-color: #3f3757;
+			color: #f4f7fc;
+			border: 1px solid #ddd;
+		}
+
+		.hidden {
+			display: none;
+		}
+
+		.inputcell {
+			padding-left: 20px;
+			padding-right: 20px;
+		}
+
+		a,
+		a:visited,
+		a:active {
+			color: #ff7f00;
+			text-decoration: none;
+		}
+
+		a:hover {
+			text-decoration: underline;
+		}
+
+		.nojs {
+			max-width: 700px;
+			width: 90%;
+			margin: 1.5em auto 0 auto;
+			font-size: 0.9em;
+			line-height: 1.5;
+		}
+
+		#generated input {
+			font-family: "Courier New", Courier, monospace;
+			background-color: #3f3757;
+			border: 1px solid #ddd;
+			padding: 0.8em;
+			width: 80%;
+			margin-top: 1em;
+			color: #f4f7fc;
+		}
+
+		#footer {
+			margin-top: 3em;
+			font-size: 0.8em;
+			color: #f4f7fc;
+		}
+
+		.image-container {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			gap: 40px;
+			margin-top: 20px;
+		}
+
+		.image-container img {
+			width: 110px;
+			height: auto;
+			cursor: pointer;
+		}
+
+		/* stretch, not center: the three controls get the exact same height and
+		   share one baseline. */
+		.birth-date-container {
+			display: flex;
+			gap: 10px;
+			align-items: stretch;
+		}
+
+		#day,
+		#month,
+		#year {
+			width: auto;
+			max-width: 100px;
+		}
+
+		#location {
+			display: flex;
+			gap: 10px;
+			align-items: center;
+		}
+
+		.language-switcher {
+			display: flex;
+			justify-content: center;
+			margin-top: 1.2em;
+		}
+
+		/* As on /eid/ and /eid/u5/: the picker must not inherit the form-field
+		   template (full width, heavy padding), and needs room under the logos. */
+		#language {
+			width: auto;
+			max-width: 200px;
+			padding: 0.25em;
+			margin-bottom: 0;
+			border: 1px solid #6b6390;
+			text-align: center;
+		}
+
+		/* Day and year as spin boxes, month as a menu: numbers are typed or
+		   stepped, month names are picked. */
+		#day {
+			flex: 0 0 7em;
+		}
+
+		#month {
+			flex: 1 1 8em;
+			min-width: 0;
+		}
+
+		#year {
+			flex: 0 0 7.5em;
+		}
+
+		/* Spin-box arrows eat the room: trim the side padding so that "День"
+		   or "Dzień" still fits. */
+		.birth-date-container input,
+		.birth-date-container select {
+			padding-left: 0.5em;
+			padding-right: 0.2em;
+		}
+
+		@media (max-width: 768px) {
+			.centered {
+				padding: 1.5em;
+			}
+
+			/* Logos stay side by side: they shrink. */
+			.image-container {
+				gap: 20px;
+			}
+
+			.image-container img {
+				width: 80px;
+			}
+
+			table {
+				width: 100%;
+				margin-top: 1em;
+			}
+
+			.birth-date-container {
+				gap: 6px;
+			}
+
+			.inputcell {
+				padding-left: 10px;
+				padding-right: 10px;
+			}
+
+			input[type="button"],
+			input[type="submit"] {
+				width: 100%;
+			}
+		}
+
+		@media (max-width: 480px) {
+
+			h1 {
+				font-size: 1.35em;
+			}
+
+			h2,
+			h3 {
+				font-size: 1.15em;
+			}
+
+			.centered {
+				padding: 1em;
+			}
+
+			/* Never below 16px: under that, iOS zooms in on focus by itself. */
+			input,
+			select,
+			label.f {
+				font-size: 16px;
+			}
+
+			/* Except these two: read-only (so no iOS zoom to fear) and 38
+			   characters to fit — truncated, they are worthless. */
+			#tohash,
+			#udid4 {
+				font-size: 0.8em;
+				padding-left: 0.4em;
+				padding-right: 0.4em;
+			}
+		}
+	</style>
+</head>
+
+<body style="text-align: center">
+	<!-- foopgp and Open-UDC: where the EID comes from. -->
+	<div class="image-container">
+		<a href="https://foopgp.org/" target="_blank" rel="noopener">
+			<img src="https://foopgp.org/images/logos/foopgp_logo_white.png" alt="foopgp_association" />
+		</a>
+		<a href="https://github.com/Open-UDC" target="_blank" rel="noopener">
+			<img src="https://foopgp.org/images/logos/openUDC_logo.png" alt="openUDC_project" />
+		</a>
+	</div>
+
+	<div class="language-switcher">
+		<select id="language">
+			<option value="en" selected>English</option>
+			<option value="fr">Français</option>
+			<option value="it">Italiano</option>
+			<option value="es">Español</option>
+			<option value="de">Deutsch</option>
+			<option value="uk">Українська</option>
+			<option value="pt">Português</option>
+			<option value="pl">Polski</option>
+			<option value="ru">Русский</option>
+		</select>
+	</div>
+
+	<noscript>
+		<p class="nojs">This page computes the identifier in your browser and sends nothing
+			anywhere. Without JavaScript it cannot compute anything — see the
+			<a href="https://foopgp.org/documents/en/draft-foopgp-urn-eid-00.txt">specification</a>
+			to derive a u4 by hand.</p>
+	</noscript>
+
+	<h1 id="t_title">Generate your u4 Entity Identifier</h1>
+
+	<h3>Your information:</h3>
+
+	<form class="centered" onsubmit="return false">
+		<div class="container">
+			<div class="field">
+				<!-- Surname first: the MRZ order (ICAO 9303), and the order the u4
+				     seed is built in. -->
+				<label class="f" id="t_lbl_surname" for="lastname">Your surname/family name at birth:</label>
+				<input id="lastname" type="text" autocomplete="family-name" spellcheck="false" />
+			</div>
+
+			<div class="field">
+				<label class="f" id="t_lbl_given" for="firstname">Your Given Names (at birth)</label>
+				<input id="firstname" type="text" autocomplete="given-name" spellcheck="false" />
+			</div>
+
+			<div class="field">
+				<!-- Three controls: a birth date can be days or eighty years old, and
+				     a single native picker makes the far past painful. Day and year
+				     are spin boxes (numeric keypad on mobile), the month is a menu
+				     because month names are not a sequence. -->
+				<label class="f" id="t_lbl_date" for="day">Your birth date:</label>
+				<div class="birth-date-container">
+					<input id="day" type="number" inputmode="numeric" min="1" max="31" step="1" />
+					<select id="month">
+						<option value=""></option>
+						<option value="01"></option>
+						<option value="02"></option>
+						<option value="03"></option>
+						<option value="04"></option>
+						<option value="05"></option>
+						<option value="06"></option>
+						<option value="07"></option>
+						<option value="08"></option>
+						<option value="09"></option>
+						<option value="10"></option>
+						<option value="11"></option>
+						<option value="12"></option>
+					</select>
+					<input id="year" type="number" inputmode="numeric" min="1880" step="1" />
+				</div>
+			</div>
+
+			<div class="field">
+				<!-- Type-ahead over one control, instead of a free-text box feeding a
+				     second, initially empty, dropdown. -->
+				<label class="f" id="t_lbl_place" for="country">Your country of birth:</label>
+				<input id="country" type="text" list="countrylist" autocomplete="off"
+					spellcheck="false" placeholder="France" />
+				<datalist id="countrylist"></datalist>
+			</div>
+
+
+			<input class="secondary" id="reset" type="button" value="Reset" onClick="resetform()" />
+			<input class="primary" id="generate" type="submit" value="Generate your EID"
+				onClick="try { generateudid2() } catch (err) { alert('An error occurred in this page: ' + err.message ); };return false" />
+		</div>
+
+		<div class="hidden" id="generated">
+			<p class="mrzcheck" id="t_mrzcheck"></p>
+			<input id="tohash" style="font-family: fixed, courier" size="50"
+				type="text" onclick="this.select()" />
+			<h4 id="t_udidinfo">Your Entity Identifier (EID):</h4>
+			<input id="udid4" style="font-family: fixed, courier" size="50"
+				type="text" onclick="this.select()" />
+			<button type="button" class="copy" id="t_btncopy" onclick="copyOut()">Copy</button>
+			<div class="urn" id="urn"></div>
+		</div>
+
+	</form>
+
+	<p id="learnmore" style="margin-top: 2em; font-size: 0.9em"></p>
+
+	<script>
+		document.addEventListener("DOMContentLoaded", () => {
+			const translations = {
+				en: {
+					title: "Generate your u4 Entity Identifier",
+					yourInformation: "Your Information:",
+					givenNames: "Your Given Names (at birth):",
+					surname: "Your surname/family name at birth:",
+					birthDate: "Your birth date:",
+					birthplace: "Your country of birth:",
+					reset: "Reset",
+					generate: "Generate your EID",
+					dayPh: "Day",
+					monthPh: "Month",
+					yearPh: "Year",
+					incomplete: "Give a full date",
+					yearRange: "Year must be between 1880 and %s",
+					invalidDate: "That date does not exist",
+					pickCountry: "Pick a country from the list",
+					copy: "Copy",
+					copied: "Copied",
+					mrzCheck: "Check this line: it alone determines your EID. Accents are dropped without any national convention — \u00abMüller\u00bb gives MULLER, not MUELLER, so it may differ from your passport.",
+					givenNeeded: "Give at least one given name in Latin letters",
+					surnameNeeded: "Give a surname in Latin letters",
+					tipLang: "Change the page language.",
+					tipSurname: "Family name at birth, before any marriage or change. Only its last component enters the identifier.",
+					tipGiven: "All your given names, in civil-registry order. Only the first two enter the identifier.",
+					tipDate: "Your date of birth as recorded by the civil registry.",
+					tipCountry: "Country of birth. Type the first letters, or the three-letter ISO code.",
+					tipReset: "Clear every field.",
+					tipGenerate: "Computes the identifier in your browser. Nothing is sent anywhere.",
+					tipMrz: "Line rebuilt to MRZ conventions: this, and only this, is what gets hashed.",
+					tipResult: "Your entity identifier. Click to select it all.",
+					tipCopy: "Copy the identifier to the clipboard.",
+					tipUrn: "URN form, the one to embed in an OpenPGP certificate.",
+					udidInfo:
+						"Your EID is a unique code to identify you only once, worldwide, without revealing your real name.",
+				},
+				fr: {
+					title: "Générez votre identifiant d'entité u4",
+					yourInformation: "Vos informations :",
+					givenNames: "Vos prénoms (à la naissance) :",
+					surname: "Votre nom de famille (à la naissance) :",
+					birthDate: "Votre date de naissance :",
+					birthplace: "Votre pays de naissance :",
+					reset: "Réinitialiser",
+					generate: "Générer votre EID",
+					dayPh: "Jour",
+					monthPh: "Mois",
+					yearPh: "Année",
+					incomplete: "Indiquez une date complète",
+					yearRange: "L'année doit être comprise entre 1880 et %s",
+					invalidDate: "Cette date n'existe pas",
+					pickCountry: "Choisissez un pays dans la liste",
+					copy: "Copier",
+					copied: "Copié",
+					mrzCheck: "Relisez cette ligne : c'est elle seule qui détermine votre EID. Les accents sont retirés sans convention nationale — «\u00a0Müller\u00a0» donne MULLER et non MUELLER, elle peut donc différer de votre passeport.",
+					givenNeeded: "Indiquez au moins un prénom en lettres latines",
+					surnameNeeded: "Indiquez un nom de famille en lettres latines",
+					tipLang: "Change la langue de la page.",
+					tipSurname: "Nom de famille à la naissance, avant tout mariage ou changement. Seul son dernier composant entre dans l'identifiant.",
+					tipGiven: "Tous vos prénoms, dans l'ordre de l'état civil. Seuls les deux premiers entrent dans l'identifiant.",
+					tipDate: "Votre date de naissance telle qu'elle figure à l'état civil.",
+					tipCountry: "Pays de naissance. Tapez les premières lettres, ou le code ISO à trois lettres.",
+					tipReset: "Efface tous les champs.",
+					tipGenerate: "Calcule l'identifiant dans votre navigateur. Rien n'est envoyé nulle part.",
+					tipMrz: "Ligne reconstituée aux conventions MRZ : c'est elle, et elle seule, qui est hachée.",
+					tipResult: "Votre identifiant d'entité. Cliquez pour tout sélectionner.",
+					tipCopy: "Copie l'identifiant dans le presse-papiers.",
+					tipUrn: "Forme URN, celle à glisser dans un certificat OpenPGP.",
+					udidInfo:
+						"Votre EID est un code unique pour vous identifier une seule fois, dans le monde entier, sans révéler votre vrai nom.",
+				},
+				it: {
+					title: "Genera il tuo identificatore di entità u4",
+					yourInformation: "Le Tue Informazioni:",
+					givenNames: "I Tuoi Nomi (alla nascita):",
+					surname: "Il Tuo Cognome (alla nascita):",
+					birthDate: "La Tua Data di Nascita:",
+					birthplace: "Il tuo paese di nascita:",
+					reset: "Resetta",
+					generate: "Genera il Tuo EID",
+					dayPh: "Giorno",
+					monthPh: "Mese",
+					yearPh: "Anno",
+					incomplete: "Indica una data completa",
+					yearRange: "L'anno deve essere compreso tra 1880 e %s",
+					invalidDate: "Questa data non esiste",
+					pickCountry: "Scegli un paese dall'elenco",
+					copy: "Copia",
+					copied: "Copiato",
+					mrzCheck: "Rileggi questa riga: è lei sola a determinare il tuo EID. Gli accenti vengono rimossi senza convenzioni nazionali — «Müller» dà MULLER, non MUELLER, quindi può differire dal tuo passaporto.",
+					givenNeeded: "Indica almeno un nome in lettere latine",
+					surnameNeeded: "Indica un cognome in lettere latine",
+					tipLang: "Cambia la lingua della pagina.",
+					tipSurname: "Cognome alla nascita, prima di matrimoni o cambiamenti. Solo l'ultimo componente entra nell'identificatore.",
+					tipGiven: "Tutti i tuoi nomi, nell'ordine dello stato civile. Solo i primi due entrano nell'identificatore.",
+					tipDate: "La tua data di nascita come risulta allo stato civile.",
+					tipCountry: "Paese di nascita. Digita le prime lettere o il codice ISO a tre lettere.",
+					tipReset: "Cancella tutti i campi.",
+					tipGenerate: "Calcola l'identificatore nel tuo browser. Nulla viene inviato.",
+					tipMrz: "Riga ricostruita secondo le convenzioni MRZ: è lei sola a essere sottoposta a hash.",
+					tipResult: "Il tuo identificatore di entità. Clicca per selezionarlo tutto.",
+					tipCopy: "Copia l'identificatore negli appunti.",
+					tipUrn: "Forma URN, quella da inserire in un certificato OpenPGP.",
+					udidInfo:
+						"Il tuo EID è un codice unico per identificarti una sola volta, in tutto il mondo, senza rivelare il tuo vero nome.",
+				},
+				es: {
+					title: "Genere su identificador de entidad u4",
+					yourInformation: "Tu Información:",
+					givenNames: "Tus Nombres (al nacer):",
+					surname: "Tu Apellido (al nacer):",
+					birthDate: "Tu Fecha de Nacimiento:",
+					birthplace: "Tu país de nacimiento:",
+					reset: "Restablecer",
+					generate: "Generar tu EID",
+					dayPh: "Día",
+					monthPh: "Mes",
+					yearPh: "Año",
+					incomplete: "Indique una fecha completa",
+					yearRange: "El año debe estar entre 1880 y %s",
+					invalidDate: "Esa fecha no existe",
+					pickCountry: "Elija un país de la lista",
+					copy: "Copiar",
+					copied: "Copiado",
+					mrzCheck: "Relea esta línea: solo ella determina su EID. Los acentos se eliminan sin convención nacional — «Müller» da MULLER, no MUELLER, por lo que puede diferir de su pasaporte.",
+					givenNeeded: "Indique al menos un nombre en letras latinas",
+					surnameNeeded: "Indique un apellido en letras latinas",
+					tipLang: "Cambia el idioma de la página.",
+					tipSurname: "Apellido de nacimiento, antes de cualquier matrimonio o cambio. Solo su último componente entra en el identificador.",
+					tipGiven: "Todos sus nombres, en el orden del registro civil. Solo los dos primeros entran en el identificador.",
+					tipDate: "Su fecha de nacimiento tal como consta en el registro civil.",
+					tipCountry: "País de nacimiento. Escriba las primeras letras o el código ISO de tres letras.",
+					tipReset: "Borra todos los campos.",
+					tipGenerate: "Calcula el identificador en su navegador. No se envía nada.",
+					tipMrz: "Línea reconstruida según las convenciones MRZ: solo ella se somete a hash.",
+					tipResult: "Su identificador de entidad. Haga clic para seleccionarlo todo.",
+					tipCopy: "Copia el identificador al portapapeles.",
+					tipUrn: "Forma URN, la que se inserta en un certificado OpenPGP.",
+					udidInfo:
+						"Tu EID es un código único para identificarte una vez, en todo el mundo, sin revelar tu verdadero nombre.",
+				},
+				de: {
+					title: "Erzeugen Sie Ihre u4-Entitätskennung",
+					yourInformation: "Ihre Informationen:",
+					givenNames: "Ihre Vornamen (bei der Geburt):",
+					surname: "Ihr Nachname (bei der Geburt):",
+					birthDate: "Ihr Geburtsdatum:",
+					birthplace: "Ihr Geburtsland:",
+					reset: "Zurücksetzen",
+					generate: "Ihre EID generieren",
+					dayPh: "Tag",
+					monthPh: "Monat",
+					yearPh: "Jahr",
+					incomplete: "Bitte ein vollständiges Datum angeben",
+					yearRange: "Das Jahr muss zwischen 1880 und %s liegen",
+					invalidDate: "Dieses Datum gibt es nicht",
+					pickCountry: "Wählen Sie ein Land aus der Liste",
+					copy: "Kopieren",
+					copied: "Kopiert",
+					mrzCheck: "Prüfen Sie diese Zeile: allein sie bestimmt Ihre EID. Diakritika entfallen ohne nationale Konvention — «Müller» ergibt MULLER, nicht MUELLER, sie kann also von Ihrem Pass abweichen.",
+					givenNeeded: "Geben Sie mindestens einen Vornamen in lateinischen Buchstaben an",
+					surnameNeeded: "Geben Sie einen Nachnamen in lateinischen Buchstaben an",
+					tipLang: "Ändert die Sprache der Seite.",
+					tipSurname: "Geburtsname, vor Eheschließung oder Änderung. Nur sein letzter Bestandteil geht in die Kennung ein.",
+					tipGiven: "Alle Vornamen in der Reihenfolge des Personenstands. Nur die ersten beiden gehen in die Kennung ein.",
+					tipDate: "Ihr Geburtsdatum laut Personenstandsregister.",
+					tipCountry: "Geburtsland. Tippen Sie die ersten Buchstaben oder den dreistelligen ISO-Code.",
+					tipReset: "Leert alle Felder.",
+					tipGenerate: "Berechnet die Kennung in Ihrem Browser. Es wird nichts gesendet.",
+					tipMrz: "Nach MRZ-Konventionen wiederhergestellte Zeile: nur sie wird gehasht.",
+					tipResult: "Ihre Entitätskennung. Zum Markieren anklicken.",
+					tipCopy: "Kopiert die Kennung in die Zwischenablage.",
+					tipUrn: "URN-Form, die in ein OpenPGP-Zertifikat gehört.",
+					udidInfo:
+						"Ihre EID ist ein einzigartiger Code, mit dem Sie weltweit einmalig identifiziert werden können, ohne Ihren echten Namen preiszugeben.",
+				},
+				uk: {
+					title: "Згенеруйте свій ідентифікатор сутності u4",
+					yourInformation: "Ваша інформація:",
+					givenNames: "Ваші імена (при народженні):",
+					surname: "Ваше прізвище (при народженні):",
+					birthDate: "Дата вашого народження:",
+					birthplace: "Країна вашого народження:",
+					reset: "Скинути",
+					generate: "Згенерувати ваш EID",
+					dayPh: "День",
+					monthPh: "Місяць",
+					yearPh: "Рік",
+					incomplete: "Вкажіть повну дату",
+					yearRange: "Рік має бути між 1880 і %s",
+					invalidDate: "Такої дати не існує",
+					pickCountry: "Оберіть країну зі списку",
+					copy: "Копіювати",
+					copied: "Скопійовано",
+					mrzCheck: "Перечитайте цей рядок: лише він визначає ваш EID. Діакритика знімається без національних правил — «Müller» дає MULLER, а не MUELLER, тож рядок може відрізнятися від паспорта.",
+					givenNeeded: "Вкажіть хоча б одне ім'я латинськими літерами",
+					surnameNeeded: "Вкажіть прізвище латинськими літерами",
+					tipLang: "Змінює мову сторінки.",
+					tipSurname: "Прізвище при народженні, до шлюбу чи зміни. До ідентифікатора входить лише остання складова.",
+					tipGiven: "Усі ваші імена в порядку запису актів. До ідентифікатора входять лише два перших.",
+					tipDate: "Ваша дата народження за записом актів цивільного стану.",
+					tipCountry: "Країна народження. Введіть перші літери або трилітерний код ISO.",
+					tipReset: "Очищає всі поля.",
+					tipGenerate: "Обчислює ідентифікатор у вашому браузері. Нічого не надсилається.",
+					tipMrz: "Рядок, відтворений за правилами MRZ: саме він і лише він хешується.",
+					tipResult: "Ваш ідентифікатор сутності. Клацніть, щоб виділити повністю.",
+					tipCopy: "Копіює ідентифікатор у буфер обміну.",
+					tipUrn: "Форма URN — саме її вставляють у сертифікат OpenPGP.",
+					udidInfo:
+						"Ваш EID — це унікальний код, що дозволяє ідентифікувати вас лише раз у всьому світі без розкриття вашого справжнього імені.",
+				},
+				pt: {
+					title: "Gere o seu identificador de entidade u4",
+					yourInformation: "As suas informações:",
+					givenNames: "Os seus nomes próprios (à nascença):",
+					surname: "O seu apelido (à nascença):",
+					birthDate: "A sua data de nascimento:",
+					birthplace: "O seu país de nascimento:",
+					reset: "Repor",
+					generate: "Gerar o seu EID",
+					dayPh: "Dia",
+					monthPh: "Mês",
+					yearPh: "Ano",
+					incomplete: "Indique uma data completa",
+					yearRange: "O ano deve estar entre 1880 e %s",
+					invalidDate: "Essa data não existe",
+					pickCountry: "Escolha um país da lista",
+					copy: "Copiar",
+					copied: "Copiado",
+					mrzCheck: "Releia esta linha: só ela determina o seu EID. Os acentos são removidos sem convenção nacional — «Müller» dá MULLER, não MUELLER, pelo que pode diferir do seu passaporte.",
+					givenNeeded: "Indique pelo menos um nome próprio em letras latinas",
+					surnameNeeded: "Indique um apelido em letras latinas",
+					tipLang: "Muda o idioma da página.",
+					tipSurname: "Apelido de nascimento, antes de qualquer casamento ou alteração. Só o último componente entra no identificador.",
+					tipGiven: "Todos os seus nomes próprios, na ordem do registo civil. Só os dois primeiros entram no identificador.",
+					tipDate: "A sua data de nascimento tal como consta do registo civil.",
+					tipCountry: "País de nascimento. Escreva as primeiras letras ou o código ISO de três letras.",
+					tipReset: "Limpa todos os campos.",
+					tipGenerate: "Calcula o identificador no seu navegador. Nada é enviado.",
+					tipMrz: "Linha reconstituída segundo as convenções MRZ: só ela é submetida a hash.",
+					tipResult: "O seu identificador de entidade. Clique para selecionar tudo.",
+					tipCopy: "Copia o identificador para a área de transferência.",
+					tipUrn: "Forma URN, a que se coloca num certificado OpenPGP.",
+					udidInfo:
+						"O seu EID é um código único para o identificar apenas uma vez, em todo o mundo, sem revelar o seu verdadeiro nome.",
+				},
+				pl: {
+					title: "Wygeneruj swój identyfikator podmiotu u4",
+					yourInformation: "Twoje dane:",
+					givenNames: "Twoje imiona (z urodzenia):",
+					surname: "Twoje nazwisko (z urodzenia):",
+					birthDate: "Twoja data urodzenia:",
+					birthplace: "Twój kraj urodzenia:",
+					reset: "Resetuj",
+					generate: "Wygeneruj swój EID",
+					dayPh: "Dzień",
+					monthPh: "Miesiąc",
+					yearPh: "Rok",
+					incomplete: "Podaj pełną datę",
+					yearRange: "Rok musi być między 1880 a %s",
+					invalidDate: "Taka data nie istnieje",
+					pickCountry: "Wybierz kraj z listy",
+					copy: "Kopiuj",
+					copied: "Skopiowano",
+					mrzCheck: "Sprawdź ten wiersz: to on jedyny wyznacza Twój EID. Znaki diakrytyczne są usuwane bez konwencji narodowych — «Müller» daje MULLER, a nie MUELLER, więc może różnić się od paszportu.",
+					givenNeeded: "Podaj co najmniej jedno imię literami łacińskimi",
+					surnameNeeded: "Podaj nazwisko literami łacińskimi",
+					tipLang: "Zmienia język strony.",
+					tipSurname: "Nazwisko rodowe, sprzed małżeństwa lub zmiany. Do identyfikatora wchodzi tylko ostatni człon.",
+					tipGiven: "Wszystkie imiona w kolejności z aktu stanu cywilnego. Do identyfikatora wchodzą tylko dwa pierwsze.",
+					tipDate: "Twoja data urodzenia zgodnie z aktem stanu cywilnego.",
+					tipCountry: "Kraj urodzenia. Wpisz pierwsze litery albo trzyliterowy kod ISO.",
+					tipReset: "Czyści wszystkie pola.",
+					tipGenerate: "Oblicza identyfikator w Twojej przeglądarce. Nic nie jest wysyłane.",
+					tipMrz: "Wiersz odtworzony zgodnie z konwencjami MRZ: tylko on jest hashowany.",
+					tipResult: "Twój identyfikator podmiotu. Kliknij, aby zaznaczyć całość.",
+					tipCopy: "Kopiuje identyfikator do schowka.",
+					tipUrn: "Postać URN — ta, którą umieszcza się w certyfikacie OpenPGP.",
+					udidInfo:
+						"Twój EID to unikalny kod, który identyfikuje Cię tylko raz, na całym świecie, bez ujawniania Twojego prawdziwego imienia i nazwiska.",
+				},
+				ru: {
+					title: "Сгенерируйте свой идентификатор сущности u4",
+					yourInformation: "Ваши данные:",
+					givenNames: "Ваши имена (при рождении):",
+					surname: "Ваша фамилия (при рождении):",
+					birthDate: "Ваша дата рождения:",
+					birthplace: "Ваша страна рождения:",
+					reset: "Сбросить",
+					generate: "Сгенерировать ваш EID",
+					dayPh: "День",
+					monthPh: "Месяц",
+					yearPh: "Год",
+					incomplete: "Укажите полную дату",
+					yearRange: "Год должен быть между 1880 и %s",
+					invalidDate: "Такой даты не существует",
+					pickCountry: "Выберите страну из списка",
+					copy: "Копировать",
+					copied: "Скопировано",
+					mrzCheck: "Перечитайте эту строку: только она определяет ваш EID. Диакритика снимается без национальных правил — «Müller» даёт MULLER, а не MUELLER, поэтому строка может отличаться от паспорта.",
+					givenNeeded: "Укажите хотя бы одно имя латинскими буквами",
+					surnameNeeded: "Укажите фамилию латинскими буквами",
+					tipLang: "Меняет язык страницы.",
+					tipSurname: "Фамилия при рождении, до брака или смены. В идентификатор входит только последняя составляющая.",
+					tipGiven: "Все ваши имена в порядке записи актов. В идентификатор входят только первые два.",
+					tipDate: "Ваша дата рождения по записи актов гражданского состояния.",
+					tipCountry: "Страна рождения. Введите первые буквы или трёхбуквенный код ISO.",
+					tipReset: "Очищает все поля.",
+					tipGenerate: "Вычисляет идентификатор в вашем браузере. Ничего не отправляется.",
+					tipMrz: "Строка, восстановленная по правилам MRZ: хешируется именно она и только она.",
+					tipResult: "Ваш идентификатор сущности. Щёлкните, чтобы выделить целиком.",
+					tipCopy: "Копирует идентификатор в буфер обмена.",
+					tipUrn: "Форма URN — та, что вставляется в сертификат OpenPGP.",
+					udidInfo:
+						"Ваш EID — это уникальный код, позволяющий идентифицировать вас лишь один раз во всём мире, не раскрывая вашего настоящего имени.",
+				},
+			};
+
+			// Same three links, same order as /eid/u5/.
+			const footerI18n = {
+				en: { another: "Create another EID", spec: "Specification" },
+				fr: { another: "Créer un autre EID", spec: "Spécification" },
+				it: { another: "Crea un altro EID", spec: "Specifica" },
+				es: { another: "Crear otro EID", spec: "Especificación" },
+				de: { another: "Eine andere EID erstellen", spec: "Spezifikation" },
+				uk: { another: "Створити інший EID", spec: "Специфікація" },
+				pt: { another: "Criar outro EID", spec: "Especificação" },
+				pl: { another: "Utwórz inny EID", spec: "Specyfikacja" },
+				ru: { another: "Создать другой EID", spec: "Спецификация" },
+			};
+
+			function translatePage(lang) {
+				const t = translations[lang];
+				if (!t) return;
+
+				document.title = t.title;
+				document.documentElement.lang = lang;
+				document.getElementById("t_title").textContent = t.title;
+				document.querySelector("h3").textContent = t.yourInformation;
+				// Labels carry ids now — no more addressing them by <td> position.
+				document.getElementById("t_lbl_surname").textContent = t.surname;
+				document.getElementById("t_lbl_given").textContent = t.givenNames;
+				document.getElementById("t_lbl_date").textContent = t.birthDate;
+				document.getElementById("t_lbl_place").textContent = t.birthplace;
+
+				// Spin box hints, month names and country list follow the language.
+				document.getElementById("day").placeholder = t.dayPh;
+				document.getElementById("year").placeholder = t.yearPh;
+				const mopts = document.getElementById("month").options;
+				mopts[0].textContent = t.monthPh;
+				monthNames(lang).forEach((m, i) => { mopts[i + 1].textContent = m; });
+				buildCountryList(lang);
+				document.getElementById("country").placeholder = countryExample(lang);
+				t_msg = t;
+				document.getElementById("reset").value = t.reset;
+				document.getElementById("generate").value = t.generate;
+				document.getElementById("t_udidinfo").textContent = t.udidInfo;
+				document.getElementById("t_btncopy").textContent = t.copy;
+				document.getElementById("t_mrzcheck").textContent = t.mrzCheck;
+
+				/* Tooltips. Every control already has a <label for> or visible
+				   text, so "title" is announced as its DESCRIPTION by screen
+				   readers rather than taken for its name. */
+				const tips = {
+					language: t.tipLang, lastname: t.tipSurname, firstname: t.tipGiven,
+					day: t.tipDate, month: t.tipDate, year: t.tipDate,
+					country: t.tipCountry, reset: t.tipReset, generate: t.tipGenerate,
+					tohash: t.tipMrz, t_mrzcheck: t.tipMrz, udid4: t.tipResult,
+					t_btncopy: t.tipCopy, urn: t.tipUrn,
+				};
+				for (const id in tips) {
+					const el = document.getElementById(id);
+					if (el && tips[id]) el.title = tips[id];
+				}
+
+				const f = footerI18n[lang] || footerI18n.en;
+				const base = (lang === "fr") ? "https://foopgp.org/fr/" : "https://foopgp.org/";
+				const lmEl = document.getElementById("learnmore");
+				if (lmEl) {
+					lmEl.innerHTML =
+						'<a href="../?lang=' + lang + '">' + f.another + '</a>' +
+						' \u00a0\u00b7\u00a0 <a href="https://foopgp.org/documents/en/draft-foopgp-urn-eid-00.txt">' + f.spec + '</a>' +
+						' \u00a0\u00b7\u00a0 <a href="' + base + '">foopgp.org</a>';
+				}
+			}
+
+			/* ?lang=it wins over the browser, so a link can carry its language. */
+			function pickLang() {
+				const norm = s => {
+					const c = (s || "").slice(0, 2).toLowerCase();
+					return translations[c] ? c : "";
+				};
+				const url = norm(new URLSearchParams(location.search).get("lang"));
+				if (url) return url;
+				for (const l of (navigator.languages || [navigator.language || "en"])) {
+					const c = norm(l);
+					if (c) return c;
+				}
+				return "en";
+			}
+
+			const lang = pickLang();
+			document.getElementById("language").value = lang;
+			translatePage(lang);
+
+			document
+				.getElementById("language")
+				.addEventListener("change", (event) => {
+					translatePage(event.target.value);
+				});
+		});
+
+		/* Country and month names come from the browser's own CLDR data
+		   (Intl.*), not from a table we would have to translate nine times and
+		   keep up to date. The alpha-2 code (4th column) is what Intl wants;
+		   the alpha-3 stays visible because it is what the spec uses. */
+		const regionNames = lang => {
+			try { return new Intl.DisplayNames([lang], { type: "region" }); }
+			catch (e) { return null; }
+		};
+
+		function monthNames(lang) {
+			try {
+				const f = new Intl.DateTimeFormat(lang, { month: "long" });
+				return Array.from({ length: 12 }, (_, i) => {
+					const n = f.format(new Date(2001, i, 15));
+					return n.charAt(0).toUpperCase() + n.slice(1);
+				});
+			} catch (e) {
+				return ["01","02","03","04","05","06","07","08","09","10","11","12"];
+			}
+		}
+
+		let countryByLabel = {};
+		let t_msg = {};   // messages de la langue courante, lus par generateudid2()
+
+		/* Rebuilds the <datalist> and the reverse map in the page language.
+		   The lookup keeps accepting the English name, the alpha-3 and the
+		   alpha-2, so a link or a habit never breaks on a language switch. */
+		function buildCountryList(lang) {
+			const dn = regionNames(lang);
+			const label = c => (dn ? dn.of(c[3]) || c[0] : c[0]) + " (" + c[1] + ")";
+			countryByLabel = {};
+			const sorted = countries.slice().sort(
+				(a, b) => label(a).localeCompare(label(b), lang));
+			const dl = documentElement("countrylist");
+			emptyElement(dl);
+			for (const c of sorted) {
+				const l = label(c);
+				countryByLabel[l.toLowerCase()] = c[2];
+				countryByLabel[l.replace(/ \([A-Z]{3}\)$/, "").toLowerCase()] = c[2];
+				countryByLabel[c[0].toLowerCase()] = c[2];   // English name
+				countryByLabel[c[1].toLowerCase()] = c[2];   // ISO 3166-1 alpha-3
+				countryByLabel[c[3].toLowerCase()] = c[2];   // ISO 3166-1 alpha-2
+				const o = document.createElement("option");
+				o.value = l;
+				dl.appendChild(o);
+			}
+		}
+
+		/* Input hint: a real country, in the page language, to show the
+		   expected "Name (ISO3)" shape. */
+		function countryExample(lang) {
+			const dn = regionNames(lang);
+			return (dn ? dn.of("FR") || "France" : "France") + " (FRA)";
+		}
+
+		function copyOut() {
+			const el = documentElement("udid4");
+			el.select();
+			if (navigator.clipboard) navigator.clipboard.writeText(el.value);
+			else document.execCommand("copy");
+			const b = documentElement("t_btncopy"), old = b.textContent;
+			b.textContent = t_msg.copied || "Copied";
+			setTimeout(() => { b.textContent = old; }, 1200);
+		}
+
+		function countryCoord(value) {
+			const v = normalizeSpaces(value || "").toLowerCase();
+			return countryByLabel[v] || "";
+		}
+	</script>
+</body>
+
+</html>

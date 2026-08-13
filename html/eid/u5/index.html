@@ -1,0 +1,666 @@
+<!--
+ Copyright 2026 Jean-Jacques Brucker (u4sRyUhEbNU5OwyLEjfSwaXAe_42.17-002.76) <jjbrucker@foopgp.org>
+ Copyright 2026 Mnêmê (u5001777236237.945e_43.30_005.38 claude-opus-5) <mneme@foopgp.org>
+
+ SPDX-License-Identifier: GPL-2.0-or-later
+
+ Generates a u5 Entity Identifier — draft-foopgp-urn-eid-00 section 5.
+ Self-contained: no library, no build step. Manual coordinate entry always
+ works offline; place search, map tiles and "here" are network extras that
+ fail silently.
+-->
+
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="description" content="Generate a u5 Entity Identifier for an association, a company, a software component or any non-human entity, from a moment and a place of origin. Computed in your browser, nothing is sent anywhere." />
+	<link rel="canonical" href="https://foopgp.org/eid/u5/" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Generate your u5 Entity Identifier</title>
+
+	<style type="text/css">
+		body {
+			background-color: #2c284b;
+			font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+			color: #f4f7fc;
+			text-align: center;
+			margin: 0;
+			padding: 0 0 30px 0;
+		}
+
+		h1 { color: #ff7f00; margin-top: 1.2em; font-size: 1.7em; }
+		h2 { color: #ff7f00; font-size: 1.15em; margin: 0 0 .2em 0; }
+
+		.card {
+			display: block;
+			padding: 1.6em;
+			background-color: #3f3757;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, .2);
+			margin: 1.5em auto 0 auto;
+			max-width: 700px;
+			width: 90%;
+			text-align: left;
+			box-sizing: border-box;
+		}
+
+		.step { color: #b9b3d0; font-size: .8em; letter-spacing: .1em; text-transform: uppercase; }
+		.hint { color: #b9b3d0; font-size: .85em; margin: .3em 0 1em 0; line-height: 1.4; }
+
+		input[type=text], input[type=number], input[type=date], input[type=time] {
+			background-color: #2c284b; color: #f4f7fc;
+			border: 1px solid #6b6390; border-radius: 4px;
+			padding: .45em; font-size: 1em; font-family: inherit;
+			box-sizing: border-box;
+		}
+		input:focus { outline: 2px solid #ff7f00; }
+
+		button {
+			background-color: #55496f; color: #f4f7fc;
+			border: 1px solid #6b6390; border-radius: 4px;
+			padding: .45em .9em; font-size: .95em; cursor: pointer; font-family: inherit;
+		}
+		button:hover { background-color: #6b5c8a; }
+		button.primary { background-color: #ff7f00; color: #2c284b; border-color: #ff7f00; font-weight: 700; }
+		button.primary:hover { background-color: #ffa040; }
+		button.accent { font-weight: 700; }
+
+		/* flex-end, not center: a bare button must sit on the same baseline as
+		   inputs that carry a label above them. */
+		.row { display: flex; flex-wrap: wrap; gap: .5em; align-items: flex-end; margin-bottom: .6em; }
+		.row > .grow { flex: 1 1 200px; min-width: 0; }
+		label.f { display: block; font-size: .85em; color: #b9b3d0; margin-bottom: .2em; }
+
+		#mapwrap { position: relative; width: 100%; height: 260px; overflow: hidden;
+			border-radius: 6px; border: 1px solid #6b6390; margin: .6em 0; cursor: crosshair;
+			background-color: #241f3d; }
+		#tiles { position: absolute; left: 0; top: 0; }
+		#tiles img { display: block; position: absolute; width: 256px; height: 256px; }
+		#pin { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
+			margin: -18px 0 0 -9px; pointer-events: none;
+			border: 3px solid #ff7f00; border-radius: 50% 50% 50% 0;
+			transform: rotate(-45deg); box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
+		.mapctl { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 4px; }
+		.mapctl button { padding: .1em .5em; font-size: 1.1em; line-height: 1.2; }
+		.attrib { position: absolute; right: 4px; bottom: 2px; font-size: .68em;
+			background: rgba(44,40,75,.75); padding: 0 4px; border-radius: 3px; }
+		.attrib a { color: #b9b3d0; }
+
+		#results { list-style: none; padding: 0; margin: .2em 0 .6em 0; max-height: 150px; overflow-y: auto; }
+		#results li { padding: .4em .6em; border-radius: 4px; cursor: pointer; font-size: .9em; }
+		#results li:hover { background-color: #55496f; }
+
+		#out { font-family: monospace; font-size: 1.05em; width: 100%; text-align: center;
+			background-color: #241f3d; border: 1px solid #ff7f00; padding: .7em; }
+		.urn { font-family: monospace; font-size: .82em; color: #b9b3d0; margin-top: .5em;
+			word-break: break-all; text-align: center; }
+		.utc { font-size: .78em; color: #b9b3d0; margin-top: .25em; }
+		.warn { color: #ffb060; font-size: .85em; margin-top: .5em; }
+		.info { font-size: .88em; margin-top: 1.6em; line-height: 1.6; }
+		.image-container { display: flex; justify-content: center; align-items: center;
+			gap: 40px; margin-top: 20px; }
+		.image-container img { width: 110px; height: auto; cursor: pointer; }
+		.language-switcher { display: flex; justify-content: center; margin-top: 1.2em; }
+		#language { max-width: 200px; text-align: center; }
+		/* Logos stay side by side: they shrink, they do not stack. */
+		@media (max-width: 600px) {
+			.image-container { gap: 20px; }
+			.image-container img { width: 80px; }
+		}
+
+		/* 32 monospace characters overflow a phone-sized card, and a truncated
+		   identifier is useless. The field is read-only, so shrinking it below
+		   16px cannot trigger the iOS focus zoom. */
+		@media (max-width: 480px) {
+			#out { font-size: 0.82em; padding: .7em .3em; }
+			.urn { font-size: .72em; }
+		}
+		a, a:visited, a:active { color: #ff7f00; }
+		.attrib a, .attrib a:visited { color: #b9b3d0; }
+		select { background-color: #2c284b; color: #f4f7fc; border: 1px solid #6b6390;
+			border-radius: 4px; padding: .25em; }
+	</style>
+</head>
+
+<body>
+
+	<!-- foopgp and Open-UDC: where the EID comes from. -->
+	<div class="image-container">
+		<a href="https://foopgp.org/" target="_blank" rel="noopener">
+			<img src="https://foopgp.org/images/logos/foopgp_logo_white.png" alt="foopgp_association" />
+		</a>
+		<a href="https://github.com/Open-UDC" target="_blank" rel="noopener">
+			<img src="https://foopgp.org/images/logos/openUDC_logo.png" alt="openUDC_project" />
+		</a>
+	</div>
+
+	<div class="language-switcher">
+		<select id="language" onchange="translatePage(this.value)">
+			<option value="en">English</option>
+			<option value="fr">Français</option>
+			<option value="it">Italiano</option>
+			<option value="es">Español</option>
+			<option value="de">Deutsch</option>
+			<option value="uk">Українська</option>
+			<option value="pt">Português</option>
+			<option value="pl">Polski</option>
+			<option value="ru">Русский</option>
+		</select>
+	</div>
+
+	<h1 id="t_title">Generate your u5 Entity Identifier</h1>
+
+	<!-- ── 1. PLACE (asked first, on purpose) ─────────────────────────── -->
+	<div class="card">
+		<div class="step" id="t_step1">Step 1 of 2</div>
+		<h2 id="t_placeh">Place of origin</h2>
+		<div class="hint" id="t_placehint">Where the entity came into being. Search for it,
+			click the map, or use your current position.</div>
+
+		<div class="row">
+			<input class="grow" type="text" id="q" placeholder="Marseille, France"
+				onkeydown="if(event.key==='Enter'){event.preventDefault();search();}" />
+			<button type="button" onclick="search()" id="t_btnsearch">Search</button>
+			<button type="button" class="accent" onclick="here()" id="t_btnhere">Here</button>
+		</div>
+		<ul id="results"></ul>
+
+		<div id="mapwrap" onclick="mapClick(event)">
+			<div id="tiles"></div>
+			<div id="pin"></div>
+			<div class="mapctl">
+				<button type="button" onclick="event.stopPropagation();zoom(1)">+</button>
+				<button type="button" onclick="event.stopPropagation();zoom(-1)">&minus;</button>
+			</div>
+			<div class="attrib">&copy; <a href="https://www.openstreetmap.org/copyright"
+					target="_blank" rel="noopener">OpenStreetMap</a></div>
+		</div>
+
+		<div class="row">
+			<div class="grow">
+				<label class="f" id="t_lat">Latitude</label>
+				<input type="number" id="lat" step="0.01" min="-90" max="90" value="43.30"
+					style="width:100%" oninput="onCoordInput()" />
+			</div>
+			<div class="grow">
+				<label class="f" id="t_lon">Longitude</label>
+				<input type="number" id="lon" step="0.01" min="-180" max="180" value="5.38"
+					style="width:100%" oninput="onCoordInput()" />
+			</div>
+		</div>
+		<div class="hint" id="t_precision" style="margin-bottom:0"></div>
+	</div>
+
+	<!-- ── 2. DATE ────────────────────────────────────────────────────── -->
+	<div class="card">
+		<div class="step" id="t_step2">Step 2 of 2</div>
+		<h2 id="t_dateh">Moment of origin</h2>
+		<div class="hint" id="t_datehint">Creation, first public appearance, legal registration
+			— whichever the entity considers its birth. Entered in your local time.</div>
+
+		<div class="row">
+			<div class="grow">
+				<label class="f" id="t_date">Date</label>
+				<input type="date" id="date" style="width:100%" oninput="compute()" />
+			</div>
+			<div class="grow">
+				<label class="f" id="t_time">Time (local)</label>
+				<input type="time" id="time" step="1" style="width:100%" oninput="compute()" />
+			</div>
+			<div style="flex:0 0 90px">
+				<label class="f" id="t_ms">ms</label>
+				<input type="number" id="ms" min="0" max="999" value="0" style="width:100%"
+					oninput="compute()" />
+			</div>
+			<button type="button" class="accent" onclick="now()" id="t_btnnow">Now</button>
+		</div>
+		<div class="utc" id="utcline"></div>
+		<div class="warn" id="datewarn"></div>
+	</div>
+
+	<!-- ── RESULT ─────────────────────────────────────────────────────── -->
+	<div class="card" style="text-align:center">
+		<h2 id="t_resh" style="text-align:left">Your u5 identifier</h2>
+		<input type="text" id="out" readonly onclick="this.select()" />
+		<div class="urn" id="urn"></div>
+		<div class="row" style="justify-content:center;margin-top:.8em">
+			<button type="button" class="primary" onclick="copyOut()" id="t_btncopy">Copy</button>
+		</div>
+	</div>
+
+	<p class="info" id="t_more"></p>
+
+	<script type="text/javascript">
+		/* ── u5 = ts16 coord14 — draft-foopgp-urn-eid-00 §5 ───────────────
+		   ts16 : signed Unix time. Lead '0'/'1' → 12-digit integer part ;
+		          lead '-' → 11 digits holding the ABSOLUTE value.
+		   coord14 : "e" lat5 lon8. The sign encodes the hemisphere, not the
+		             rounded magnitude: -0.004 is "-00.00", never "_00.00".
+		             Rounding is half-to-even, the spec being silent.        */
+
+		function ts16(msEpoch) {
+			const neg = msEpoch < 0, abs = Math.abs(msEpoch);
+			const s = Math.floor(abs / 1000), ms = abs % 1000;
+			const frac = "." + String(ms).padStart(3, "0");
+			return neg ? "-" + String(s).padStart(11, "0") + frac
+			           : String(s).padStart(12, "0") + frac;
+		}
+
+		function round2(v) {
+			const x = v * 100, f = Math.floor(x), d = x - f;
+			// 1e-9 absorbs the float error that makes 0.015*100 === 1.4999…
+			const n = (Math.abs(d - 0.5) < 1e-9) ? (f % 2 === 0 ? f : f + 1)
+			                                     : (d > 0.5 ? f + 1 : f);
+			return n / 100;
+		}
+
+		function coord14(lat, lon) {
+			const f = (v, w) => (v < 0 ? "-" : "_")
+				+ Math.abs(round2(v)).toFixed(2).padStart(w, "0");
+			return "e" + f(lat, 5) + f(lon, 6);
+		}
+
+		const $ = id => document.getElementById(id);
+		let lat = 43.30, lon = 5.38, z = 5;
+
+		/* ── slippy-map: tiles as plain <img>, no library ─────────────────
+		   Web Mercator, 256px tiles. The grid is redrawn around the pin,
+		   which always sits at the centre of the viewport.                 */
+		const TS = 256;
+		const lon2x = (lo, zz) => (lo + 180) / 360 * Math.pow(2, zz);
+		const lat2y = (la, zz) => {
+			const r = la * Math.PI / 180;
+			return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, zz);
+		};
+		const x2lon = (x, zz) => x / Math.pow(2, zz) * 360 - 180;
+		const y2lat = (y, zz) => {
+			const n = Math.PI - 2 * Math.PI * y / Math.pow(2, zz);
+			return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+		};
+
+		function drawMap() {
+			const wrap = $("mapwrap"), W = wrap.clientWidth, H = wrap.clientHeight;
+			const cx = lon2x(lon, z), cy = lat2y(lat, z), n = Math.pow(2, z);
+			// pixel offset of the tile grid so that (lat,lon) lands on the centre
+			const ox = W / 2 - cx * TS, oy = H / 2 - cy * TS;
+			const x0 = Math.floor(-ox / TS), x1 = Math.floor((W - ox) / TS);
+			const y0 = Math.floor(-oy / TS), y1 = Math.floor((H - oy) / TS);
+			let html = "";
+			for (let ty = y0; ty <= y1; ty++) {
+				if (ty < 0 || ty >= n) continue;              // no wrap vertically
+				for (let tx = x0; tx <= x1; tx++) {
+					const wx = ((tx % n) + n) % n;             // wrap horizontally
+					html += '<img loading="lazy" src="https://tile.openstreetmap.org/'
+						+ z + '/' + wx + '/' + ty + '.png" style="left:'
+						+ (ox + tx * TS) + 'px;top:' + (oy + ty * TS) + 'px" alt="" />';
+				}
+			}
+			$("tiles").innerHTML = html;
+		}
+
+		function mapClick(ev) {
+			const wrap = $("mapwrap"), r = wrap.getBoundingClientRect();
+			const dx = ev.clientX - r.left - r.width / 2;
+			const dy = ev.clientY - r.top - r.height / 2;
+			setCoords(y2lat(lat2y(lat, z) + dy / TS, z), x2lon(lon2x(lon, z) + dx / TS, z));
+		}
+
+		function zoom(d) {
+			z = Math.max(1, Math.min(18, z + d));
+			drawMap();
+		}
+
+		function setCoords(la, lo, redraw = true) {
+			lat = Math.max(-90, Math.min(90, la));
+			lon = ((lo + 180) % 360 + 360) % 360 - 180;       // normalise to [-180,180)
+			$("lat").value = lat.toFixed(2);
+			$("lon").value = lon.toFixed(2);
+			if (redraw) drawMap();
+			compute();
+		}
+
+		function onCoordInput() {
+			const la = parseFloat($("lat").value), lo = parseFloat($("lon").value);
+			if (isNaN(la) || isNaN(lo)) return;
+			lat = la; lon = lo; drawMap(); compute();
+		}
+
+		/* ── place search: Nominatim (OpenStreetMap), no API key ────────── */
+		function search() {
+			const q = $("q").value.trim();
+			if (!q) return;
+			const ul = $("results");
+			ul.innerHTML = "<li>…</li>";
+			fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&q="
+				+ encodeURIComponent(q), { headers: { "Accept": "application/json" } })
+				.then(r => r.json())
+				.then(list => {
+					if (!list.length) { ul.innerHTML = "<li>" + T().nores + "</li>"; return; }
+					ul.innerHTML = "";
+					for (const p of list) {
+						const li = document.createElement("li");
+						li.textContent = p.display_name;
+						li.onclick = () => {
+							ul.innerHTML = "";
+							$("q").value = p.display_name;
+							z = 11;
+							setCoords(parseFloat(p.lat), parseFloat(p.lon));
+						};
+						ul.appendChild(li);
+					}
+				})
+				.catch(() => { ul.innerHTML = "<li>" + T().neterr + "</li>"; });
+		}
+
+		/* ── "here": browser geolocation, then IP as a fallback ─────────── */
+		function here() {
+			const ul = $("results");
+			ul.innerHTML = "<li>…</li>";
+			const byIP = () => {
+				// The visitor's IP reaches a third party here — say so rather than hide it.
+				ul.innerHTML = "<li>" + T().viaip + "</li>";
+				fetch("https://ipwho.is/")
+					.then(r => r.json())
+					.then(d => {
+						if (!d || typeof d.latitude !== "number") throw 0;
+						ul.innerHTML = "";
+						z = 9;
+						setCoords(d.latitude, d.longitude);
+					})
+					.catch(() => { ul.innerHTML = "<li>" + T().neterr + "</li>"; });
+			};
+			if (!navigator.geolocation) return byIP();
+			navigator.geolocation.getCurrentPosition(
+				p => { ul.innerHTML = ""; z = 13; setCoords(p.coords.latitude, p.coords.longitude); },
+				byIP, { timeout: 8000 });
+		}
+
+		/* ── date ───────────────────────────────────────────────────────── */
+		function now() {
+			const d = new Date();
+			const p = (v, n = 2) => String(v).padStart(n, "0");
+			$("date").value = d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+			$("time").value = p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+			$("ms").value = d.getMilliseconds();
+			compute();
+		}
+
+		function epochMs() {
+			const dv = $("date").value;
+			if (!dv) return null;
+			const [Y, M, D] = dv.split("-").map(Number);
+			// Date-only → 00:00:00.000 UTC (spec §5.2). With a time, it is local.
+			const tv = $("time").value;
+			let ms = parseInt($("ms").value, 10); if (isNaN(ms) || ms < 0 || ms > 999) ms = 0;
+			if (!tv) return Date.UTC(Y, M - 1, D) + ms;
+			const [h, mi, s] = (tv + ":0").split(":").map(Number);
+			const d = new Date(Y, M - 1, D, h, mi, s || 0, ms);
+			d.setFullYear(Y);                                  // years < 100 must not shift
+			return d.getTime();
+		}
+
+		/* ── result ─────────────────────────────────────────────────────── */
+		function compute() {
+			const t = T();
+			$("t_precision").textContent = t.precision;
+			const ms = epochMs();
+			if (ms === null || isNaN(ms)) {
+				$("out").value = ""; $("urn").textContent = "";
+				$("utcline").textContent = ""; $("datewarn").textContent = t.nodate;
+				return;
+			}
+			const u5 = ts16(ms) + coord14(lat, lon);
+			$("out").value = "u5" + u5;
+			$("urn").textContent = "urn:eid:u5" + u5;
+			$("utcline").textContent = "UTC : " + new Date(ms).toISOString();
+			$("datewarn").textContent = (ms < 0) ? t.before1970 : "";
+		}
+
+		function copyOut() {
+			const el = $("out"); el.select();
+			navigator.clipboard ? navigator.clipboard.writeText(el.value) : document.execCommand("copy");
+			const b = $("t_btncopy"), old = b.textContent;
+			b.textContent = T().copied;
+			setTimeout(() => { b.textContent = old; }, 1200);
+		}
+
+		/* ── i18n ───────────────────────────────────────────────────────── */
+		const translations = {
+			en: { title: "Generate your u5 Entity Identifier", step1: "Step 1 of 2", step2: "Step 2 of 2",
+				placeh: "Place of origin", placehint: "Where the entity came into being. Search for it, click the map, or use your current position.",
+				dateh: "Moment of origin", datehint: "Creation, first public appearance, legal registration — whichever the entity considers its birth. Entered in your local time.",
+				resh: "Your u5 identifier", search: "Search", herebtn: "Here", nowbtn: "Now", copy: "Copy", copied: "Copied",
+				lat: "Latitude", lon: "Longitude", date: "Date", time: "Time (local)", ms: "ms",
+				precision: "Two decimals — about one kilometre. That is all the identifier keeps.",
+				nodate: "Enter a date to obtain the identifier.", before1970: "Before 1970 — encoded as a negative timestamp, which the specification allows.",
+				nores: "Nothing found.", neterr: "Search unavailable — enter the coordinates by hand.",
+				viaip: "No browser position; asking a third party from your IP address…",
+				tipLang: "Change the page language.",
+				tipQuery: "Name of a place: town, country, address.",
+				tipSearch: "Look this place up (OpenStreetMap / Nominatim).",
+				tipHere: "Uses your browser position; failing that, your IP address.",
+				tipMap: "Click the map to drop the point. + and − to zoom.",
+				tipNow: "Fills in the current instant, to the millisecond.",
+				tipOut: "Your entity identifier. Click to select it all.",
+				tipCopy: "Copy the identifier to the clipboard.",
+				tipUrn: "URN form, the one to embed in an OpenPGP certificate.",
+				spec: "Specification", another: "Create another EID", home: "foopgp.org" },
+			fr: { title: "Générez votre identifiant d'entité u5", step1: "Étape 1 sur 2", step2: "Étape 2 sur 2",
+				placeh: "Lieu d'origine", placehint: "Là où l'entité est apparue. Cherchez-le, cliquez sur la carte, ou utilisez votre position actuelle.",
+				dateh: "Instant d'origine", datehint: "Création, première apparition publique, enregistrement légal — ce que l'entité considère comme sa naissance. Saisi dans votre heure locale.",
+				resh: "Votre identifiant u5", search: "Chercher", herebtn: "Ici", nowbtn: "Maintenant", copy: "Copier", copied: "Copié",
+				lat: "Latitude", lon: "Longitude", date: "Date", time: "Heure (locale)", ms: "ms",
+				precision: "Deux décimales — environ un kilomètre. C'est tout ce que l'identifiant retient.",
+				nodate: "Saisissez une date pour obtenir l'identifiant.", before1970: "Avant 1970 — encodé en horodatage négatif, ce que la spécification prévoit.",
+				nores: "Rien trouvé.", neterr: "Recherche indisponible — saisissez les coordonnées à la main.",
+				viaip: "Pas de position du navigateur ; interrogation d'un tiers à partir de votre adresse IP…",
+				tipLang: "Change la langue de la page.",
+				tipQuery: "Nom d'un lieu : ville, pays, adresse.",
+				tipSearch: "Cherche ce lieu (OpenStreetMap / Nominatim).",
+				tipHere: "Utilise la position de votre navigateur ; à défaut, votre adresse IP.",
+				tipMap: "Cliquez sur la carte pour poser le point. + et − pour zoomer.",
+				tipNow: "Remplit l'instant courant, à la milliseconde près.",
+				tipOut: "Votre identifiant d'entité. Cliquez pour tout sélectionner.",
+				tipCopy: "Copie l'identifiant dans le presse-papiers.",
+				tipUrn: "Forme URN, celle à glisser dans un certificat OpenPGP.",
+				spec: "Spécification", another: "Créer un autre EID", home: "foopgp.org" },
+			it: { title: "Genera il tuo identificatore di entità u5", step1: "Passo 1 di 2", step2: "Passo 2 di 2",
+				placeh: "Luogo di origine", placehint: "Dove l'entità è nata. Cercalo, clicca sulla mappa o usa la tua posizione.",
+				dateh: "Momento di origine", datehint: "Creazione, prima apparizione pubblica, registrazione legale — ciò che l'entità considera la propria nascita. Inserito nell'ora locale.",
+				resh: "Il tuo identificatore u5", search: "Cerca", herebtn: "Qui", nowbtn: "Adesso", copy: "Copia", copied: "Copiato",
+				lat: "Latitudine", lon: "Longitudine", date: "Data", time: "Ora (locale)", ms: "ms",
+				precision: "Due decimali — circa un chilometro. È tutto ciò che l'identificatore conserva.",
+				nodate: "Inserisci una data per ottenere l'identificatore.", before1970: "Prima del 1970 — codificato come timestamp negativo, previsto dalla specifica.",
+				nores: "Nessun risultato.", neterr: "Ricerca non disponibile — inserisci le coordinate a mano.",
+				viaip: "Nessuna posizione dal browser; interrogazione di terzi tramite il tuo indirizzo IP…",
+				tipLang: "Cambia la lingua della pagina.",
+				tipQuery: "Nome di un luogo: città, paese, indirizzo.",
+				tipSearch: "Cerca questo luogo (OpenStreetMap / Nominatim).",
+				tipHere: "Usa la posizione del browser; in mancanza, il tuo indirizzo IP.",
+				tipMap: "Clicca sulla mappa per posare il punto. + e − per lo zoom.",
+				tipNow: "Inserisce l'istante corrente, al millisecondo.",
+				tipOut: "Il tuo identificatore di entità. Clicca per selezionarlo tutto.",
+				tipCopy: "Copia l'identificatore negli appunti.",
+				tipUrn: "Forma URN, quella da inserire in un certificato OpenPGP.",
+				spec: "Specifica", another: "Crea un altro EID", home: "foopgp.org" },
+			es: { title: "Genere su identificador de entidad u5", step1: "Paso 1 de 2", step2: "Paso 2 de 2",
+				placeh: "Lugar de origen", placehint: "Donde nació la entidad. Búsquelo, haga clic en el mapa o use su posición actual.",
+				dateh: "Momento de origen", datehint: "Creación, primera aparición pública, registro legal — lo que la entidad considere su nacimiento. Introducido en su hora local.",
+				resh: "Su identificador u5", search: "Buscar", herebtn: "Aquí", nowbtn: "Ahora", copy: "Copiar", copied: "Copiado",
+				lat: "Latitud", lon: "Longitud", date: "Fecha", time: "Hora (local)", ms: "ms",
+				precision: "Dos decimales — alrededor de un kilómetro. Es todo lo que el identificador conserva.",
+				nodate: "Introduzca una fecha para obtener el identificador.", before1970: "Antes de 1970 — codificado como marca de tiempo negativa, previsto por la especificación.",
+				nores: "No se encontró nada.", neterr: "Búsqueda no disponible — introduzca las coordenadas a mano.",
+				viaip: "Sin posición del navegador; consultando a un tercero desde su dirección IP…",
+				tipLang: "Cambia el idioma de la página.",
+				tipQuery: "Nombre de un lugar: ciudad, país, dirección.",
+				tipSearch: "Busca este lugar (OpenStreetMap / Nominatim).",
+				tipHere: "Usa la posición de su navegador; en su defecto, su dirección IP.",
+				tipMap: "Haga clic en el mapa para colocar el punto. + y − para acercar.",
+				tipNow: "Rellena el instante actual, al milisegundo.",
+				tipOut: "Su identificador de entidad. Haga clic para seleccionarlo todo.",
+				tipCopy: "Copia el identificador al portapapeles.",
+				tipUrn: "Forma URN, la que se inserta en un certificado OpenPGP.",
+				spec: "Especificación", another: "Crear otro EID", home: "foopgp.org" },
+			de: { title: "Erzeugen Sie Ihre u5-Entitätskennung", step1: "Schritt 1 von 2", step2: "Schritt 2 von 2",
+				placeh: "Ursprungsort", placehint: "Wo die Entität entstanden ist. Suchen Sie ihn, klicken Sie auf die Karte oder nutzen Sie Ihre Position.",
+				dateh: "Ursprungszeitpunkt", datehint: "Gründung, erstes öffentliches Auftreten, Eintragung — was die Entität als ihre Geburt ansieht. Eingabe in Ihrer Ortszeit.",
+				resh: "Ihre u5-Kennung", search: "Suchen", herebtn: "Hier", nowbtn: "Jetzt", copy: "Kopieren", copied: "Kopiert",
+				lat: "Breite", lon: "Länge", date: "Datum", time: "Zeit (lokal)", ms: "ms",
+				precision: "Zwei Nachkommastellen — etwa ein Kilometer. Mehr behält die Kennung nicht.",
+				nodate: "Geben Sie ein Datum ein, um die Kennung zu erhalten.", before1970: "Vor 1970 — als negativer Zeitstempel codiert, wie die Spezifikation es vorsieht.",
+				nores: "Nichts gefunden.", neterr: "Suche nicht verfügbar — Koordinaten von Hand eingeben.",
+				viaip: "Keine Browser-Position; Abfrage bei einem Dritten über Ihre IP-Adresse…",
+				tipLang: "Ändert die Sprache der Seite.",
+				tipQuery: "Name eines Ortes: Stadt, Land, Adresse.",
+				tipSearch: "Diesen Ort suchen (OpenStreetMap / Nominatim).",
+				tipHere: "Nutzt die Position Ihres Browsers, sonst Ihre IP-Adresse.",
+				tipMap: "Auf die Karte klicken, um den Punkt zu setzen. + und − zum Zoomen.",
+				tipNow: "Trägt den aktuellen Zeitpunkt ein, auf die Millisekunde genau.",
+				tipOut: "Ihre Entitätskennung. Zum Markieren anklicken.",
+				tipCopy: "Kopiert die Kennung in die Zwischenablage.",
+				tipUrn: "URN-Form, die in ein OpenPGP-Zertifikat gehört.",
+				spec: "Spezifikation", another: "Eine andere EID erstellen", home: "foopgp.org" },
+			uk: { title: "Згенеруйте свій ідентифікатор сутності u5", step1: "Крок 1 з 2", step2: "Крок 2 з 2",
+				placeh: "Місце виникнення", placehint: "Де сутність з'явилася. Знайдіть його, клацніть на карті або скористайтеся своїм положенням.",
+				dateh: "Момент виникнення", datehint: "Створення, перша поява, юридична реєстрація — те, що сутність вважає своїм народженням. Вводиться за вашим місцевим часом.",
+				resh: "Ваш ідентифікатор u5", search: "Пошук", herebtn: "Тут", nowbtn: "Зараз", copy: "Копіювати", copied: "Скопійовано",
+				lat: "Широта", lon: "Довгота", date: "Дата", time: "Час (місцевий)", ms: "мс",
+				precision: "Два знаки після коми — близько кілометра. Це все, що зберігає ідентифікатор.",
+				nodate: "Введіть дату, щоб отримати ідентифікатор.", before1970: "До 1970 — кодується від'ємною міткою часу, що передбачено специфікацією.",
+				nores: "Нічого не знайдено.", neterr: "Пошук недоступний — введіть координати вручну.",
+				viaip: "Немає положення від браузера; запит до третьої сторони за вашою IP-адресою…",
+				tipLang: "Змінює мову сторінки.",
+				tipQuery: "Назва місця: місто, країна, адреса.",
+				tipSearch: "Шукає це місце (OpenStreetMap / Nominatim).",
+				tipHere: "Використовує положення браузера; якщо його немає — вашу IP-адресу.",
+				tipMap: "Клацніть на карті, щоб поставити точку. + і − для масштабу.",
+				tipNow: "Підставляє поточну мить, з точністю до мілісекунди.",
+				tipOut: "Ваш ідентифікатор сутності. Клацніть, щоб виділити повністю.",
+				tipCopy: "Копіює ідентифікатор у буфер обміну.",
+				tipUrn: "Форма URN — саме її вставляють у сертифікат OpenPGP.",
+				spec: "Специфікація", another: "Створити інший EID", home: "foopgp.org" },
+			pt: { title: "Gere o seu identificador de entidade u5", step1: "Passo 1 de 2", step2: "Passo 2 de 2",
+				placeh: "Local de origem", placehint: "Onde a entidade surgiu. Procure-o, clique no mapa ou use a sua posição atual.",
+				dateh: "Momento de origem", datehint: "Criação, primeira aparição pública, registo legal — o que a entidade considerar o seu nascimento. Introduzido na sua hora local.",
+				resh: "O seu identificador u5", search: "Procurar", herebtn: "Aqui", nowbtn: "Agora", copy: "Copiar", copied: "Copiado",
+				lat: "Latitude", lon: "Longitude", date: "Data", time: "Hora (local)", ms: "ms",
+				precision: "Duas casas decimais — cerca de um quilómetro. É tudo o que o identificador guarda.",
+				nodate: "Introduza uma data para obter o identificador.", before1970: "Antes de 1970 — codificado como carimbo temporal negativo, previsto na especificação.",
+				nores: "Nada encontrado.", neterr: "Pesquisa indisponível — introduza as coordenadas à mão.",
+				viaip: "Sem posição do navegador; a consultar terceiros a partir do seu endereço IP…",
+				tipLang: "Muda o idioma da página.",
+				tipQuery: "Nome de um local: cidade, país, morada.",
+				tipSearch: "Procura este local (OpenStreetMap / Nominatim).",
+				tipHere: "Usa a posição do seu navegador; na falta dela, o seu endereço IP.",
+				tipMap: "Clique no mapa para colocar o ponto. + e − para ampliar.",
+				tipNow: "Preenche o instante atual, ao milissegundo.",
+				tipOut: "O seu identificador de entidade. Clique para selecionar tudo.",
+				tipCopy: "Copia o identificador para a área de transferência.",
+				tipUrn: "Forma URN, a que se coloca num certificado OpenPGP.",
+				spec: "Especificação", another: "Criar outro EID", home: "foopgp.org" },
+			pl: { title: "Wygeneruj swój identyfikator podmiotu u5", step1: "Krok 1 z 2", step2: "Krok 2 z 2",
+				placeh: "Miejsce powstania", placehint: "Gdzie podmiot powstał. Wyszukaj je, kliknij mapę lub użyj swojej pozycji.",
+				dateh: "Moment powstania", datehint: "Utworzenie, pierwsze publiczne wystąpienie, rejestracja — to, co podmiot uznaje za swoje narodziny. Wprowadzane w czasie lokalnym.",
+				resh: "Twój identyfikator u5", search: "Szukaj", herebtn: "Tutaj", nowbtn: "Teraz", copy: "Kopiuj", copied: "Skopiowano",
+				lat: "Szerokość", lon: "Długość", date: "Data", time: "Czas (lokalny)", ms: "ms",
+				precision: "Dwa miejsca po przecinku — około kilometra. Tylko tyle zachowuje identyfikator.",
+				nodate: "Wprowadź datę, aby uzyskać identyfikator.", before1970: "Przed 1970 — kodowane jako ujemny znacznik czasu, co przewiduje specyfikacja.",
+				nores: "Nic nie znaleziono.", neterr: "Wyszukiwanie niedostępne — wprowadź współrzędne ręcznie.",
+				viaip: "Brak pozycji z przeglądarki; zapytanie do strony trzeciej na podstawie Twojego adresu IP…",
+				tipLang: "Zmienia język strony.",
+				tipQuery: "Nazwa miejsca: miasto, kraj, adres.",
+				tipSearch: "Wyszukuje to miejsce (OpenStreetMap / Nominatim).",
+				tipHere: "Używa pozycji przeglądarki, a w jej braku — Twojego adresu IP.",
+				tipMap: "Kliknij mapę, aby postawić punkt. + i − do powiększania.",
+				tipNow: "Wstawia bieżącą chwilę, co do milisekundy.",
+				tipOut: "Twój identyfikator podmiotu. Kliknij, aby zaznaczyć całość.",
+				tipCopy: "Kopiuje identyfikator do schowka.",
+				tipUrn: "Postać URN — ta, którą umieszcza się w certyfikacie OpenPGP.",
+				spec: "Specyfikacja", another: "Utwórz inny EID", home: "foopgp.org" },
+			ru: { title: "Сгенерируйте свой идентификатор сущности u5", step1: "Шаг 1 из 2", step2: "Шаг 2 из 2",
+				placeh: "Место возникновения", placehint: "Где возникла сущность. Найдите его, щёлкните по карте или используйте своё положение.",
+				dateh: "Момент возникновения", datehint: "Создание, первое публичное появление, юридическая регистрация — то, что сущность считает своим рождением. Вводится по вашему местному времени.",
+				resh: "Ваш идентификатор u5", search: "Поиск", herebtn: "Здесь", nowbtn: "Сейчас", copy: "Копировать", copied: "Скопировано",
+				lat: "Широта", lon: "Долгота", date: "Дата", time: "Время (местное)", ms: "мс",
+				precision: "Два знака после запятой — около километра. Это всё, что сохраняет идентификатор.",
+				nodate: "Введите дату, чтобы получить идентификатор.", before1970: "До 1970 — кодируется отрицательной меткой времени, что предусмотрено спецификацией.",
+				nores: "Ничего не найдено.", neterr: "Поиск недоступен — введите координаты вручную.",
+				viaip: "Нет положения от браузера; запрос к третьей стороне по вашему IP-адресу…",
+				tipLang: "Меняет язык страницы.",
+				tipQuery: "Название места: город, страна, адрес.",
+				tipSearch: "Ищет это место (OpenStreetMap / Nominatim).",
+				tipHere: "Использует положение браузера; при его отсутствии — ваш IP-адрес.",
+				tipMap: "Щёлкните по карте, чтобы поставить точку. + и − для масштаба.",
+				tipNow: "Подставляет текущий момент, с точностью до миллисекунды.",
+				tipOut: "Ваш идентификатор сущности. Щёлкните, чтобы выделить целиком.",
+				tipCopy: "Копирует идентификатор в буфер обмена.",
+				tipUrn: "Форма URN — та, что вставляется в сертификат OpenPGP.",
+				spec: "Спецификация", another: "Создать другой EID", home: "foopgp.org" }
+		};
+
+		let curLang = "en";
+		const T = () => translations[curLang] || translations.en;
+
+		function translatePage(lang) {
+			curLang = translations[lang] ? lang : "en";
+			const t = T();
+			document.title = t.title;
+			document.documentElement.lang = curLang;
+			const map = { title: "title", step1: "step1", step2: "step2", placeh: "placeh",
+				placehint: "placehint", dateh: "dateh", datehint: "datehint", resh: "resh",
+				lat: "lat", lon: "lon", date: "date", time: "time", ms: "ms" };
+			for (const k in map) { const el = $("t_" + k); if (el) el.textContent = t[map[k]]; }
+			$("t_btnsearch").textContent = t.search;
+			$("t_btnhere").textContent = t.herebtn;
+			$("t_btnnow").textContent = t.nowbtn;
+			$("t_btncopy").textContent = t.copy;
+			const base = (curLang === "fr") ? "https://foopgp.org/fr/" : "https://foopgp.org/";
+			$("t_more").innerHTML =
+				'<a href="../?lang=' + curLang + '">' + t.another + '</a>'
+				+ ' &nbsp;·&nbsp; <a href="https://foopgp.org/documents/en/draft-foopgp-urn-eid-00.txt">' + t.spec + '</a>'
+				+ ' &nbsp;·&nbsp; <a href="' + base + '">' + t.home + '</a>';
+
+			/* Tooltips. Every control already has a label, so "title" is
+			   announced as its DESCRIPTION rather than taken for its name. */
+			const tips = {
+				language: t.tipLang, q: t.tipQuery, t_btnsearch: t.tipSearch,
+				t_btnhere: t.tipHere, mapwrap: t.tipMap, lat: t.precision,
+				lon: t.precision, date: t.datehint, time: t.datehint, ms: t.datehint,
+				t_btnnow: t.tipNow, out: t.tipOut, t_btncopy: t.tipCopy, urn: t.tipUrn,
+			};
+			for (const id in tips) {
+				const el = $(id);
+				if (el && tips[id]) el.title = tips[id];
+			}
+			compute();
+		}
+
+		/* ?lang=it wins over the browser, so a link can carry its language. */
+		function pickLang() {
+			const norm = s => {
+				const c = (s || "").slice(0, 2).toLowerCase();
+				return translations[c] ? c : "";
+			};
+			const url = norm(new URLSearchParams(location.search).get("lang"));
+			if (url) return url;
+			for (const l of (navigator.languages || [navigator.language || "en"])) {
+				const c = norm(l);
+				if (c) return c;
+			}
+			return "en";
+		}
+
+		(function () {
+			const lang = pickLang();
+			$("language").value = lang;
+			translatePage(lang);
+			drawMap();
+			window.addEventListener("resize", drawMap);
+		})();
+	</script>
+
+</body>
+
+</html>
