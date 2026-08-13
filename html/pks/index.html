@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<!-- Milligram CSS via the Debian package libjs-milligram (Suggests).
+     The /javascript/ alias is provided by the javascript-common package. -->
+<link rel="stylesheet" href="/javascript/milligram/milligram.min.css">
+<style>
+  /* Milligram's default body font is 1.6em (16px on top of html 62.5%),
+     h1 4.0rem and h2 3.6rem; the cap on .container is 112rem. That
+     reads "fat" on a modern monitor and leaves a big white moat in
+     landscape — pull everything in. The media queries then re-tune
+     for narrow portrait phones (more breathing room, slightly bigger
+     touch targets) and for very wide screens (less wasted moat). */
+  body          { font-size: 1.5em; line-height: 1.5; }
+  h1            { font-size: 2.6rem; margin-bottom: 1rem; }
+  h2            { font-size: 1.9rem; margin-top: 2rem; margin-bottom: .8rem; }
+  form label    { display: inline-block; }
+  form          { margin-bottom: 1.5rem; }
+  .container    { max-width: 90rem; padding: 0 2rem; }
+  #keytext      { min-height: 10rem; }
+  .display-block{ display: block; }
+  .lang-bar     { display: flex; justify-content: flex-end; padding-top: .5rem; }
+  /* appearance:none drops the native dropdown chrome, incl. the
+     caret that Chromium otherwise floats in the middle of an
+     auto-width <select> sized for its widest option. Bare flag+text
+     is a strong enough affordance; click still opens the OS picker. */
+  #lang-select  { appearance: none; -webkit-appearance: none;
+                  width: auto; padding: .2rem .6rem; font-size: .85rem; height: auto; margin: 0; }
+  .site-footer  { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #ddd;
+                  text-align: center; font-size: .85em; }
+  .site-footer a, .site-footer span { margin: 0 .35em; }
+  .site-footer .here { opacity: .55; }
+  @media (min-width: 1200px) {
+    .container  { max-width: 110rem; }
+  }
+  @media (max-width: 600px) {
+    body        { font-size: 1.4em; }
+    h1          { font-size: 2.2rem; }
+    h2          { font-size: 1.7rem; }
+    .container  { padding: 0 1rem; }
+  }
+</style>
+<title data-i18n="page_title">Public Key Server</title>
+</head>
+
+<body>
+<div class="container">
+
+  <div class="lang-bar">
+    <select id="lang-select" title="Language">
+      <option value="en">🇬🇧 English</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="it">🇮🇹 Italiano</option>
+      <option value="uk">🇺🇦 Українська</option>
+      <option value="pl">🇵🇱 Polski</option>
+      <option value="pt">🇵🇹 Português</option>
+      <option value="ru">🇷🇺 Русский</option>
+    </select>
+  </div>
+
+  <h1><a href="https://github.com/foopgp/onak">Onak-foopgp</a> <span data-i18n="h1_suffix">Public Key Server</span></h1>
+
+  <h2 data-i18n="h2_search">Search PGP certificates</h2>
+
+  <form action="/pks/lookup" method="GET">
+    <label for="index" data-i18n="label_index">Index:</label>
+    <input type="radio" name="op" value="index" id="index" checked>
+
+    <label for="verbose" data-i18n="label_verbose">Verbose:</label>
+    <input type="radio" name="op" value="vindex" id="verbose">
+
+    <label for="search" class="display-block" data-i18n="label_search">Search String</label>
+    <input type="text" name="search" id="search">
+
+    <input type="checkbox" name="fingerprint" id="fingerprints">
+    <label for="fingerprints" data-i18n="label_fingerprints">Show fingerprints</label><br>
+
+    <input type="checkbox" name="exact" id="exact">
+    <label for="exact" data-i18n="label_exact">Exact matches</label><br>
+
+    <input class="button-clear" type="reset" value="Reset" data-i18n-value="btn_reset">
+    <input class="button-primary" type="submit" value="Search" data-i18n-value="btn_search">
+  </form>
+
+  <h2 data-i18n="h2_add">Add a new PGP certificate to the server</h2>
+
+    <p><code>$ gpg --armor --export &lt;email&gt;</code></p>
+
+    <form action="/pks/add" method="POST">
+      <label for="keytext" data-i18n="label_keytext">Your armored public PGP key</label>
+      <textarea name="keytext" id="keytext" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----
+...
+...
+...
+-----END PGP PUBLIC KEY BLOCK----- "></textarea>
+      <input class="button-clear" type="reset" value="Reset" data-i18n-value="btn_reset">
+      <input class="button-primary" type="submit" value="Send" data-i18n-value="btn_send">
+    </form>
+
+  <footer class="site-footer">
+    <a href="/" data-i18n="footer_home">🏠 Home</a>·
+    <span class="here" data-i18n="footer_search">🔍 Search</span>·
+    <a href="/pgp2vcard.html" data-i18n="footer_vcard">🪪 Convert PGP → vCard</a>·
+    <a href="/eid/" data-i18n="footer_eid">🆔 Create an EID</a>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var STRINGS = {
+    en: { page_title: "Public Key Server", h1_suffix: "Public Key Server", h2_search: "Search PGP certificates", label_index: "Index:", label_verbose: "Verbose:", label_search: "Search String", label_fingerprints: "Show fingerprints", label_exact: "Exact matches", btn_reset: "Reset", btn_search: "Search", h2_add: "Add a new PGP certificate to the server", label_keytext: "Your armored public PGP key", btn_send: "Send", footer_home: "🏠 Home", footer_search: "🔍 Search", footer_vcard: "🪪 Convert PGP → vCard", footer_eid: "🆔 Create an EID" },
+    fr: { page_title: "Serveur de clés publiques", h1_suffix: "Serveur de clés publiques", h2_search: "Rechercher un certificat PGP", label_index: "Index :", label_verbose: "Détaillé :", label_search: "Chaîne à rechercher", label_fingerprints: "Afficher les empreintes", label_exact: "Correspondance exacte", btn_reset: "Réinitialiser", btn_search: "Rechercher", h2_add: "Ajouter un nouveau certificat PGP au serveur", label_keytext: "Votre clé publique PGP au format armuré", btn_send: "Envoyer", footer_home: "🏠 Accueil", footer_search: "🔍 Rechercher", footer_vcard: "🪪 Convertir PGP → vCard", footer_eid: "🆔 Créer un EID" },
+    de: { page_title: "Öffentlicher Schlüsselserver", h1_suffix: "Öffentlicher Schlüsselserver", h2_search: "PGP-Zertifikate suchen", label_index: "Index:", label_verbose: "Ausführlich:", label_search: "Suchbegriff", label_fingerprints: "Fingerabdrücke anzeigen", label_exact: "Genaue Übereinstimmung", btn_reset: "Zurücksetzen", btn_search: "Suchen", h2_add: "Neues PGP-Zertifikat zum Server hinzufügen", label_keytext: "Ihr öffentlicher PGP-Schlüssel (ASCII-armored)", btn_send: "Senden", footer_home: "🏠 Startseite", footer_search: "🔍 Suchen", footer_vcard: "🪪 PGP → vCard umwandeln", footer_eid: "🆔 EID erstellen" },
+    es: { page_title: "Servidor de claves públicas", h1_suffix: "Servidor de claves públicas", h2_search: "Buscar certificados PGP", label_index: "Índice:", label_verbose: "Detallado:", label_search: "Cadena de búsqueda", label_fingerprints: "Mostrar las huellas digitales", label_exact: "Coincidencia exacta", btn_reset: "Reiniciar", btn_search: "Buscar", h2_add: "Añadir un nuevo certificado PGP al servidor", label_keytext: "Su clave pública PGP en formato armored", btn_send: "Enviar", footer_home: "🏠 Inicio", footer_search: "🔍 Buscar", footer_vcard: "🪪 Convertir PGP → vCard", footer_eid: "🆔 Crear un EID" },
+    it: { page_title: "Server di chiavi pubbliche", h1_suffix: "Server di chiavi pubbliche", h2_search: "Cerca certificati PGP", label_index: "Indice:", label_verbose: "Dettagliato:", label_search: "Stringa di ricerca", label_fingerprints: "Mostra le impronte", label_exact: "Corrispondenza esatta", btn_reset: "Reimposta", btn_search: "Cerca", h2_add: "Aggiungi un nuovo certificato PGP al server", label_keytext: "La tua chiave PGP pubblica in formato armored", btn_send: "Invia", footer_home: "🏠 Home", footer_search: "🔍 Cerca", footer_vcard: "🪪 Converti PGP → vCard", footer_eid: "🆔 Crea un EID" },
+    uk: { page_title: "Сервер відкритих ключів", h1_suffix: "Сервер відкритих ключів", h2_search: "Пошук сертифікатів PGP", label_index: "Індекс:", label_verbose: "Детально:", label_search: "Рядок пошуку", label_fingerprints: "Показати відбитки", label_exact: "Точна відповідність", btn_reset: "Скинути", btn_search: "Шукати", h2_add: "Додати новий сертифікат PGP на сервер", label_keytext: "Ваш відкритий ключ PGP у форматі armored", btn_send: "Надіслати", footer_home: "🏠 Головна", footer_search: "🔍 Пошук", footer_vcard: "🪪 Конвертувати PGP → vCard", footer_eid: "🆔 Створити EID" },
+    pl: { page_title: "Serwer kluczy publicznych", h1_suffix: "Serwer kluczy publicznych", h2_search: "Wyszukaj certyfikaty PGP", label_index: "Indeks:", label_verbose: "Szczegółowo:", label_search: "Szukany ciąg", label_fingerprints: "Pokaż odciski", label_exact: "Dokładne dopasowanie", btn_reset: "Resetuj", btn_search: "Szukaj", h2_add: "Dodaj nowy certyfikat PGP do serwera", label_keytext: "Twój publiczny klucz PGP w formacie armored", btn_send: "Wyślij", footer_home: "🏠 Strona główna", footer_search: "🔍 Szukaj", footer_vcard: "🪪 Konwertuj PGP → vCard", footer_eid: "🆔 Utwórz EID" },
+    pt: { page_title: "Servidor de chaves públicas", h1_suffix: "Servidor de chaves públicas", h2_search: "Pesquisar certificados PGP", label_index: "Índice:", label_verbose: "Detalhado:", label_search: "Texto a pesquisar", label_fingerprints: "Mostrar as impressões digitais", label_exact: "Correspondência exata", btn_reset: "Repor", btn_search: "Pesquisar", h2_add: "Adicionar um novo certificado PGP ao servidor", label_keytext: "A sua chave pública PGP em formato armored", btn_send: "Enviar", footer_home: "🏠 Início", footer_search: "🔍 Procurar", footer_vcard: "🪪 Converter PGP → vCard", footer_eid: "🆔 Criar um EID" },
+    ru: { page_title: "Сервер открытых ключей", h1_suffix: "Сервер открытых ключей", h2_search: "Поиск сертификатов PGP", label_index: "Индекс:", label_verbose: "Подробно:", label_search: "Строка поиска", label_fingerprints: "Показать отпечатки", label_exact: "Точное совпадение", btn_reset: "Сбросить", btn_search: "Искать", h2_add: "Добавить новый сертификат PGP на сервер", label_keytext: "Ваш открытый ключ PGP в формате armored", btn_send: "Отправить", footer_home: "🏠 Главная", footer_search: "🔍 Поиск", footer_vcard: "🪪 Преобразовать PGP → vCard", footer_eid: "🆔 Создать EID" }
+  };
+
+  function pickLang() {
+    var stored = null;
+    try { stored = sessionStorage.getItem("onak-lang"); } catch (e) {}
+    if (stored && STRINGS[stored]) return stored;
+    var nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+    return STRINGS[nav] ? nav : "en";
+  }
+
+  function apply(lang) {
+    var dict = STRINGS[lang] || STRINGS.en;
+    document.documentElement.setAttribute("lang", lang);
+    var nodes = document.querySelectorAll("[data-i18n]");
+    for (var i = 0; i < nodes.length; i++) {
+      var k = nodes[i].getAttribute("data-i18n");
+      if (dict[k]) {
+        if (nodes[i].tagName === "TITLE") {
+          document.title = dict[k];
+        } else {
+          nodes[i].textContent = dict[k];
+        }
+      }
+    }
+    nodes = document.querySelectorAll("[data-i18n-value]");
+    for (var j = 0; j < nodes.length; j++) {
+      var v = nodes[j].getAttribute("data-i18n-value");
+      if (dict[v]) nodes[j].value = dict[v];
+    }
+  }
+
+  var sel = document.getElementById("lang-select");
+  var lang = pickLang();
+  sel.value = lang;
+  apply(lang);
+
+  sel.addEventListener("change", function () {
+    var L = sel.value;
+    try { sessionStorage.setItem("onak-lang", L); } catch (e) {}
+    apply(L);
+  });
+})();
+</script>
+</body>
+</html>
