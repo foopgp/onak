@@ -25,3 +25,16 @@ GPATH
 GRTAGS
 GTAGS
 .*.swp
+
+# dpkg-buildpackage builds in the source tree, so the objects, the staging
+# tree and the debhelper stamps all land here. Ignored rather than trusted
+# to a careful "git add": on 2026-08-13 a "git add --all" after a package
+# build swept eleven megabytes of them into a commit.
+obj-*/
+debian/.debhelper/
+debian/onak-foopgp/
+debian/files
+debian/*.debhelper
+debian/*.debhelper.log
+debian/*.substvars
+debian/debhelper-build-stamp

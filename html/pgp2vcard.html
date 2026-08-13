@@ -142,12 +142,22 @@ Everything runs in your browser — nothing is uploaded.</p>
       if (el.tagName === "TITLE") document.title = v; else el.textContent = v;
     });
   }
+  /* The eid pages read ?lang= and honour it, but they are a separate copy of
+     a separate tool: the choice made here does not reach them by itself.
+     Rewrite the links that leave for them whenever a language is applied. */
+  function carryLang(lang) {
+    var links = document.querySelectorAll('a[href^="/eid/"]');
+    for (var i = 0; i < links.length; i++) {
+      var base = links[i].getAttribute("href").split("?")[0];
+      links[i].setAttribute("href", base + "?lang=" + lang);
+    }
+  }
   var LANG = pickLang();
   var sel = document.getElementById("lang-select");
-  sel.value = LANG; applyI18n();
+  sel.value = LANG; applyI18n(); carryLang(LANG);
   sel.addEventListener("change", function () {
     LANG = sel.value; try { sessionStorage.setItem("onak-lang", LANG); } catch (e) {}
-    applyI18n();
+    applyI18n(); carryLang(LANG);
   });
 
   /* ---- vCard helpers (hand-rolled RFC 6350) ---------------------------- */

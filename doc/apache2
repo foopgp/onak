@@ -17,10 +17,14 @@ Two things that bite:
  * suexec must NOT be enabled — it refuses to run the programs installed in
    /usr/lib/cgi-bin/pks. Remove mods-enabled/suexec.load if it is there.
 
- * The four CGI endpoints are aliased one by one (lookup, add, gpgwww,
-   hashquery) rather than the whole /pks/ prefix, so that the pages served
-   under /pks/ reach the document root instead of being looked for among the
-   programs. Keep it that way when adapting the file.
+ * The CGI endpoints are aliased one by one rather than the whole /pks/
+   prefix, so that the pages served under /pks/ reach the document root
+   instead of being looked for among the programs. Keep it that way when
+   adapting the file.
+
+ * hashquery — SKS-style reconciliation between key servers — is installed
+   but its alias is commented out: this server peers with nobody. Uncomment
+   it in the virtual host the day it does.
 
 What ends up where:
 
@@ -29,7 +33,7 @@ What ends up where:
 	/pks/lookup          CGI                            HKP, and the web index
 	/pks/add             CGI                            HKP submission
 	/pks/gpgwww          CGI                            path finder (experimental)
-	/pks/hashquery       CGI                            SKS-style hash query
+	/pks/hashquery       CGI (alias off)                SKS-style reconciliation
 	/pgp2vcard.html      /var/www/onak/                 certificate → contact card
 	/eid/                /var/www/onak/eid/             identifier generators
 

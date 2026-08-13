@@ -1,0 +1,23 @@
+# Installing the web pages under /var/www/onak is deliberate.
+#
+# Debian policy says a package should not put files there, and lintian makes
+# it an error. We disagree for this package: a key server is a web service,
+# and being able to install one with a single apt install — pages included —
+# is worth more than the tidiness of the rule. Telling Apache to serve them
+# from somewhere else would be less clean, not more.
+#
+# The alternative, should this ever be reconsidered: install to
+# /usr/share/onak/www and alias it from the shipped virtual host.
+onak-foopgp: dir-or-file-in-var-www [var/www/onak/*]
+onak-foopgp: dir-or-file-in-var-www [var/www/onak/]
+
+# The eid pages load the association's logo from foopgp.org.
+#
+# lintian calls any cross-host asset a privacy breach, and in general it is
+# right: the host serving it learns who reads the page. Here that host is our
+# own — the same association runs both — and the pages say in their source
+# that their links are absolute on purpose, being written to be copied and
+# served from anywhere. Making the URL host-relative would work too, at the
+# cost of shipping the image in every copy; worth doing the day a copy is
+# served by someone who is not us.
+onak-foopgp: privacy-breach-logo * [var/www/onak/eid/*]

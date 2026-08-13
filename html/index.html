@@ -184,15 +184,28 @@
     });
   });
 
+  /* The eid pages read ?lang= and honour it; they are a different origin's
+     copy of the same tool, so the choice does not follow by itself. Rewrite
+     the links that leave for them each time a language is applied. */
+  function carryLang(lang) {
+    var links = document.querySelectorAll('a[href^="/eid/"], a[href="/eid/"]');
+    for (var i = 0; i < links.length; i++) {
+      var base = links[i].getAttribute("href").split("?")[0];
+      links[i].setAttribute("href", base + "?lang=" + lang);
+    }
+  }
+
   var sel = document.getElementById("lang-select");
   var lang = pickLang();
   sel.value = lang;
   apply(lang);
+  carryLang(lang);
 
   sel.addEventListener("change", function () {
     var L = sel.value;
     try { sessionStorage.setItem("onak-lang", L); } catch (e) {}
     apply(L);
+    carryLang(L);
   });
 })();
 </script>
