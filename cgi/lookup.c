@@ -403,7 +403,7 @@ err:
 	if (!mrhkp && !is_download && op != OP_PHOTO) {
 		puts("<hr>");
 		puts(" &mdash; onak " ONAK_VERSION " &mdash;");
-		puts(" <a href=\"../\">/</a> &mdash;");
+		puts(" <a href=\"../\"> .. </a> &mdash;");
 		if (contact_copy != NULL) {
 			puts(" <a href=\"lookup?op=index&amp;search=");
 			fputs(contact_copy, stdout);
