@@ -29,6 +29,16 @@
   .door:hover, .door:focus { border-color: #9b4dca; box-shadow: 0 1px 6px rgba(0,0,0,.08); }
   .door-t       { display: block; font-weight: 600; margin-bottom: .3rem; }
   .door-d       { display: block; font-size: .85em; opacity: .8; }
+  .path         { margin-top: 2.5rem; }
+  .path h2      { font-size: 1.5rem; margin-bottom: .3rem; }
+  .path form    { display: flex; flex-wrap: wrap; align-items: baseline; gap: .6rem; margin-top: .8rem; }
+  .path label   { margin: 0; }
+  .path input[type=text] { width: 20rem; max-width: 100%; margin: 0; font-family: monospace; }
+  .path input[type=submit] { margin: 0; }
+  /* Said once, in the heading, rather than repeated in every sentence. */
+  .tag          { font-size: .6em; text-transform: uppercase; letter-spacing: .05em;
+                  border: 1px solid #d0a; color: #d0a; border-radius: .3rem;
+                  padding: .05em .4em; vertical-align: middle; }
   .site-footer  { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid #ddd;
                   text-align: center; font-size: .85em; }
   .site-footer a, .site-footer span { margin: 0 .35em; }
@@ -76,6 +86,27 @@
     </a>
   </div>
 
+  <!-- Jonathan McDowell's path finder, which the key server has always
+       carried. Given as a form rather than a door: it takes two keys, and a
+       link with nothing in it answers "Must pass from & to". Announced as
+       experimental because it is — its own page says so, and it prints a
+       direct path three times over. -->
+  <section class="path">
+    <h2 data-i18n="t_path">🕸 Trust path <span class="tag" data-i18n="tag_exp">experimental</span></h2>
+    <p class="door-d" data-i18n="d_path">Find a chain of certifications leading from one key to another.</p>
+    <form id="path-form" action="/pks/gpgwww" method="GET">
+      <label for="from" data-i18n="l_from">From</label>
+      <input type="text" id="from" name="from" required spellcheck="false"
+             pattern="(0[xX])?([0-9a-fA-F]{16}|[0-9a-fA-F]{40})"
+             placeholder="0xFE1349E747CF1896" data-i18n-title="ti_key">
+      <label for="to" data-i18n="l_to">To</label>
+      <input type="text" id="to" name="to" required spellcheck="false"
+             pattern="(0[xX])?([0-9a-fA-F]{16}|[0-9a-fA-F]{40})"
+             placeholder="0xDEC98791AADC429B" data-i18n-title="ti_key">
+      <input class="button-primary" type="submit" value="Find a path" data-i18n-value="btn_path">
+    </form>
+  </section>
+
   <footer class="site-footer">
     <span class="here" data-i18n="footer_home">🏠 Home</span>·
     <a href="/pks/" data-i18n="footer_search">🔍 Search</a>·
@@ -91,15 +122,15 @@
      kept for the session, ?lang= winning over the browser so a link can
      carry its language. */
   var STRINGS = {
-    en: { page_title: "Key server — foopgp", h1_suffix: "Public Key Server", tagline: "Publish, find and check OpenPGP certificates — and mint the identifier they carry.", t_search: "🔍 Search certificates", d_search: "Look a certificate up, or publish yours. The key server proper.", t_vcard: "🪪 PGP → vCard", d_vcard: "Turn a certificate into a contact card your address book understands.", t_eid: "🆔 Create an EID", d_eid: "Mint the entity identifier a PGP ID certificate carries — from a civil status (u4), or from a place and an instant (u5).", footer_home: "🏠 Home", footer_search: "🔍 Search", footer_vcard: "🪪 Convert PGP → vCard", footer_eid: "🆔 Create an EID" },
-    fr: { page_title: "Serveur de clés — foopgp", h1_suffix: "Serveur de clés publiques", tagline: "Publier, trouver et vérifier des certificats OpenPGP — et fabriquer l'identifiant qu'ils portent.", t_search: "🔍 Rechercher un certificat", d_search: "Consulter un certificat, ou publier le vôtre. Le serveur de clés proprement dit.", t_vcard: "🪪 PGP → vCard", d_vcard: "Transformer un certificat en carte de contact que votre carnet d'adresses comprend.", t_eid: "🆔 Créer un EID", d_eid: "Fabriquer l'identifiant d'entité que porte un certificat PGP ID — depuis un état civil (u4), ou depuis un lieu et un instant (u5).", footer_home: "🏠 Accueil", footer_search: "🔍 Rechercher", footer_vcard: "🪪 Convertir PGP → vCard", footer_eid: "🆔 Créer un EID" },
-    de: { page_title: "Schlüsselserver — foopgp", h1_suffix: "Öffentlicher Schlüsselserver", tagline: "OpenPGP-Zertifikate veröffentlichen, finden und prüfen — und die Kennung erzeugen, die sie tragen.", t_search: "🔍 Zertifikate suchen", d_search: "Ein Zertifikat nachschlagen oder Ihres veröffentlichen. Der Schlüsselserver selbst.", t_vcard: "🪪 PGP → vCard", d_vcard: "Ein Zertifikat in eine Kontaktkarte umwandeln, die Ihr Adressbuch versteht.", t_eid: "🆔 EID erstellen", d_eid: "Die Entitätskennung erzeugen, die ein PGP-ID-Zertifikat trägt — aus einem Personenstand (u4) oder aus Ort und Zeitpunkt (u5).", footer_home: "🏠 Startseite", footer_search: "🔍 Suchen", footer_vcard: "🪪 PGP → vCard umwandeln", footer_eid: "🆔 EID erstellen" },
-    es: { page_title: "Servidor de claves — foopgp", h1_suffix: "Servidor de claves públicas", tagline: "Publicar, encontrar y comprobar certificados OpenPGP — y crear el identificador que llevan.", t_search: "🔍 Buscar certificados", d_search: "Consultar un certificado o publicar el suyo. El servidor de claves propiamente dicho.", t_vcard: "🪪 PGP → vCard", d_vcard: "Convertir un certificado en una tarjeta de contacto que su agenda entiende.", t_eid: "🆔 Crear un EID", d_eid: "Crear el identificador de entidad que lleva un certificado PGP ID — desde un estado civil (u4) o desde un lugar y un instante (u5).", footer_home: "🏠 Inicio", footer_search: "🔍 Buscar", footer_vcard: "🪪 Convertir PGP → vCard", footer_eid: "🆔 Crear un EID" },
-    it: { page_title: "Server di chiavi — foopgp", h1_suffix: "Server di chiavi pubbliche", tagline: "Pubblicare, trovare e verificare certificati OpenPGP — e creare l'identificatore che portano.", t_search: "🔍 Cerca certificati", d_search: "Consultare un certificato o pubblicare il tuo. Il server di chiavi vero e proprio.", t_vcard: "🪪 PGP → vCard", d_vcard: "Trasformare un certificato in una scheda contatto che la tua rubrica capisce.", t_eid: "🆔 Crea un EID", d_eid: "Creare l'identificatore di entità che porta un certificato PGP ID — da uno stato civile (u4) o da un luogo e un istante (u5).", footer_home: "🏠 Home", footer_search: "🔍 Cerca", footer_vcard: "🪪 Converti PGP → vCard", footer_eid: "🆔 Crea un EID" },
-    uk: { page_title: "Сервер ключів — foopgp", h1_suffix: "Сервер відкритих ключів", tagline: "Публікувати, знаходити та перевіряти сертифікати OpenPGP — і створювати ідентифікатор, який вони несуть.", t_search: "🔍 Пошук сертифікатів", d_search: "Переглянути сертифікат або опублікувати свій. Власне сервер ключів.", t_vcard: "🪪 PGP → vCard", d_vcard: "Перетворити сертифікат на контактну картку, зрозумілу вашій адресній книзі.", t_eid: "🆔 Створити EID", d_eid: "Створити ідентифікатор сутності, який несе сертифікат PGP ID — з громадянського стану (u4) або з місця та миті (u5).", footer_home: "🏠 Головна", footer_search: "🔍 Пошук", footer_vcard: "🪪 Конвертувати PGP → vCard", footer_eid: "🆔 Створити EID" },
-    pl: { page_title: "Serwer kluczy — foopgp", h1_suffix: "Serwer kluczy publicznych", tagline: "Publikuj, znajduj i sprawdzaj certyfikaty OpenPGP — oraz twórz identyfikator, który w sobie noszą.", t_search: "🔍 Szukaj certyfikatów", d_search: "Sprawdź certyfikat albo opublikuj swój. Właściwy serwer kluczy.", t_vcard: "🪪 PGP → vCard", d_vcard: "Zamień certyfikat w kartę kontaktu, którą rozumie twoja książka adresowa.", t_eid: "🆔 Utwórz EID", d_eid: "Utwórz identyfikator podmiotu noszony przez certyfikat PGP ID — ze stanu cywilnego (u4) albo z miejsca i chwili (u5).", footer_home: "🏠 Strona główna", footer_search: "🔍 Szukaj", footer_vcard: "🪪 Konwertuj PGP → vCard", footer_eid: "🆔 Utwórz EID" },
-    pt: { page_title: "Servidor de chaves — foopgp", h1_suffix: "Servidor de chaves públicas", tagline: "Publicar, encontrar e verificar certificados OpenPGP — e criar o identificador que eles carregam.", t_search: "🔍 Procurar certificados", d_search: "Consultar um certificado ou publicar o seu. O servidor de chaves propriamente dito.", t_vcard: "🪪 PGP → vCard", d_vcard: "Transformar um certificado num cartão de contacto que a sua lista de contactos entende.", t_eid: "🆔 Criar um EID", d_eid: "Criar o identificador de entidade que um certificado PGP ID carrega — a partir de um estado civil (u4) ou de um lugar e um instante (u5).", footer_home: "🏠 Início", footer_search: "🔍 Procurar", footer_vcard: "🪪 Converter PGP → vCard", footer_eid: "🆔 Criar um EID" },
-    ru: { page_title: "Сервер ключей — foopgp", h1_suffix: "Сервер открытых ключей", tagline: "Публиковать, находить и проверять сертификаты OpenPGP — и создавать идентификатор, который они несут.", t_search: "🔍 Поиск сертификатов", d_search: "Посмотреть сертификат или опубликовать свой. Собственно сервер ключей.", t_vcard: "🪪 PGP → vCard", d_vcard: "Превратить сертификат в контактную карточку, понятную вашей адресной книге.", t_eid: "🆔 Создать EID", d_eid: "Создать идентификатор сущности, который несёт сертификат PGP ID — из гражданского состояния (u4) или из места и мгновения (u5).", footer_home: "🏠 Главная", footer_search: "🔍 Поиск", footer_vcard: "🪪 Преобразовать PGP → vCard", footer_eid: "🆔 Создать EID" }
+    en: { page_title: "Key server — foopgp", h1_suffix: "Public Key Server", tagline: "Publish, find and check OpenPGP certificates — and mint the identifier they carry.", t_search: "🔍 Search certificates", d_search: "Look a certificate up, or publish yours. The key server proper.", t_vcard: "🪪 PGP → vCard", d_vcard: "Turn a certificate into a contact card your address book understands.", t_eid: "🆔 Create an EID", d_eid: "Mint the entity identifier a PGP ID certificate carries — from a civil status (u4), or from a place and an instant (u5).", footer_home: "🏠 Home", footer_search: "🔍 Search", footer_vcard: "🪪 Convert PGP → vCard", footer_eid: "🆔 Create an EID", t_path: "🕸 Trust path", tag_exp: "experimental", d_path: "Find a chain of certifications leading from one key to another.", l_from: "From", l_to: "To", btn_path: "Find a path", ti_key: "A key id (16 hex) or a fingerprint, which is trimmed to its key id." },
+    fr: { page_title: "Serveur de clés — foopgp", h1_suffix: "Serveur de clés publiques", tagline: "Publier, trouver et vérifier des certificats OpenPGP — et fabriquer l'identifiant qu'ils portent.", t_search: "🔍 Rechercher un certificat", d_search: "Consulter un certificat, ou publier le vôtre. Le serveur de clés proprement dit.", t_vcard: "🪪 PGP → vCard", d_vcard: "Transformer un certificat en carte de contact que votre carnet d'adresses comprend.", t_eid: "🆔 Créer un EID", d_eid: "Fabriquer l'identifiant d'entité que porte un certificat PGP ID — depuis un état civil (u4), ou depuis un lieu et un instant (u5).", footer_home: "🏠 Accueil", footer_search: "🔍 Rechercher", footer_vcard: "🪪 Convertir PGP → vCard", footer_eid: "🆔 Créer un EID", t_path: "🕸 Chemin de confiance", tag_exp: "expérimental", d_path: "Trouver une chaîne de certifications menant d'une clé à une autre.", l_from: "De", l_to: "Vers", btn_path: "Chercher un chemin", ti_key: "Un key id (16 hexa) ou une empreinte, ramenée à son key id." },
+    de: { page_title: "Schlüsselserver — foopgp", h1_suffix: "Öffentlicher Schlüsselserver", tagline: "OpenPGP-Zertifikate veröffentlichen, finden und prüfen — und die Kennung erzeugen, die sie tragen.", t_search: "🔍 Zertifikate suchen", d_search: "Ein Zertifikat nachschlagen oder Ihres veröffentlichen. Der Schlüsselserver selbst.", t_vcard: "🪪 PGP → vCard", d_vcard: "Ein Zertifikat in eine Kontaktkarte umwandeln, die Ihr Adressbuch versteht.", t_eid: "🆔 EID erstellen", d_eid: "Die Entitätskennung erzeugen, die ein PGP-ID-Zertifikat trägt — aus einem Personenstand (u4) oder aus Ort und Zeitpunkt (u5).", footer_home: "🏠 Startseite", footer_search: "🔍 Suchen", footer_vcard: "🪪 PGP → vCard umwandeln", footer_eid: "🆔 EID erstellen", t_path: "🕸 Vertrauenspfad", tag_exp: "experimentell", d_path: "Eine Kette von Zertifizierungen von einem Schlüssel zum anderen finden.", l_from: "Von", l_to: "Nach", btn_path: "Pfad suchen", ti_key: "Eine Key-ID (16 Hex) oder ein Fingerabdruck, der auf seine Key-ID gekürzt wird." },
+    es: { page_title: "Servidor de claves — foopgp", h1_suffix: "Servidor de claves públicas", tagline: "Publicar, encontrar y comprobar certificados OpenPGP — y crear el identificador que llevan.", t_search: "🔍 Buscar certificados", d_search: "Consultar un certificado o publicar el suyo. El servidor de claves propiamente dicho.", t_vcard: "🪪 PGP → vCard", d_vcard: "Convertir un certificado en una tarjeta de contacto que su agenda entiende.", t_eid: "🆔 Crear un EID", d_eid: "Crear el identificador de entidad que lleva un certificado PGP ID — desde un estado civil (u4) o desde un lugar y un instante (u5).", footer_home: "🏠 Inicio", footer_search: "🔍 Buscar", footer_vcard: "🪪 Convertir PGP → vCard", footer_eid: "🆔 Crear un EID", t_path: "🕸 Camino de confianza", tag_exp: "experimental", d_path: "Encontrar una cadena de certificaciones de una clave a otra.", l_from: "De", l_to: "A", btn_path: "Buscar un camino", ti_key: "Un key id (16 hex) o una huella, que se reduce a su key id." },
+    it: { page_title: "Server di chiavi — foopgp", h1_suffix: "Server di chiavi pubbliche", tagline: "Pubblicare, trovare e verificare certificati OpenPGP — e creare l'identificatore che portano.", t_search: "🔍 Cerca certificati", d_search: "Consultare un certificato o pubblicare il tuo. Il server di chiavi vero e proprio.", t_vcard: "🪪 PGP → vCard", d_vcard: "Trasformare un certificato in una scheda contatto che la tua rubrica capisce.", t_eid: "🆔 Crea un EID", d_eid: "Creare l'identificatore di entità che porta un certificato PGP ID — da uno stato civile (u4) o da un luogo e un istante (u5).", footer_home: "🏠 Home", footer_search: "🔍 Cerca", footer_vcard: "🪪 Converti PGP → vCard", footer_eid: "🆔 Crea un EID", t_path: "🕸 Percorso di fiducia", tag_exp: "sperimentale", d_path: "Trovare una catena di certificazioni da una chiave a un'altra.", l_from: "Da", l_to: "A", btn_path: "Cerca un percorso", ti_key: "Un key id (16 esadecimali) o un'impronta, ridotta al suo key id." },
+    uk: { page_title: "Сервер ключів — foopgp", h1_suffix: "Сервер відкритих ключів", tagline: "Публікувати, знаходити та перевіряти сертифікати OpenPGP — і створювати ідентифікатор, який вони несуть.", t_search: "🔍 Пошук сертифікатів", d_search: "Переглянути сертифікат або опублікувати свій. Власне сервер ключів.", t_vcard: "🪪 PGP → vCard", d_vcard: "Перетворити сертифікат на контактну картку, зрозумілу вашій адресній книзі.", t_eid: "🆔 Створити EID", d_eid: "Створити ідентифікатор сутності, який несе сертифікат PGP ID — з громадянського стану (u4) або з місця та миті (u5).", footer_home: "🏠 Головна", footer_search: "🔍 Пошук", footer_vcard: "🪪 Конвертувати PGP → vCard", footer_eid: "🆔 Створити EID", t_path: "🕸 Шлях довіри", tag_exp: "експериментально", d_path: "Знайти ланцюг сертифікацій від одного ключа до іншого.", l_from: "Від", l_to: "До", btn_path: "Знайти шлях", ti_key: "Key id (16 шістнадцяткових) або відбиток, скорочений до key id." },
+    pl: { page_title: "Serwer kluczy — foopgp", h1_suffix: "Serwer kluczy publicznych", tagline: "Publikuj, znajduj i sprawdzaj certyfikaty OpenPGP — oraz twórz identyfikator, który w sobie noszą.", t_search: "🔍 Szukaj certyfikatów", d_search: "Sprawdź certyfikat albo opublikuj swój. Właściwy serwer kluczy.", t_vcard: "🪪 PGP → vCard", d_vcard: "Zamień certyfikat w kartę kontaktu, którą rozumie twoja książka adresowa.", t_eid: "🆔 Utwórz EID", d_eid: "Utwórz identyfikator podmiotu noszony przez certyfikat PGP ID — ze stanu cywilnego (u4) albo z miejsca i chwili (u5).", footer_home: "🏠 Strona główna", footer_search: "🔍 Szukaj", footer_vcard: "🪪 Konwertuj PGP → vCard", footer_eid: "🆔 Utwórz EID", t_path: "🕸 Ścieżka zaufania", tag_exp: "eksperymentalne", d_path: "Znaleźć łańcuch certyfikacji prowadzący od jednego klucza do drugiego.", l_from: "Od", l_to: "Do", btn_path: "Szukaj ścieżki", ti_key: "Key id (16 szesnastkowych) albo odcisk, skracany do key id." },
+    pt: { page_title: "Servidor de chaves — foopgp", h1_suffix: "Servidor de chaves públicas", tagline: "Publicar, encontrar e verificar certificados OpenPGP — e criar o identificador que eles carregam.", t_search: "🔍 Procurar certificados", d_search: "Consultar um certificado ou publicar o seu. O servidor de chaves propriamente dito.", t_vcard: "🪪 PGP → vCard", d_vcard: "Transformar um certificado num cartão de contacto que a sua lista de contactos entende.", t_eid: "🆔 Criar um EID", d_eid: "Criar o identificador de entidade que um certificado PGP ID carrega — a partir de um estado civil (u4) ou de um lugar e um instante (u5).", footer_home: "🏠 Início", footer_search: "🔍 Procurar", footer_vcard: "🪪 Converter PGP → vCard", footer_eid: "🆔 Criar um EID", t_path: "🕸 Caminho de confiança", tag_exp: "experimental", d_path: "Encontrar uma cadeia de certificações de uma chave a outra.", l_from: "De", l_to: "Para", btn_path: "Procurar um caminho", ti_key: "Um key id (16 hex) ou uma impressão digital, reduzida ao seu key id." },
+    ru: { page_title: "Сервер ключей — foopgp", h1_suffix: "Сервер открытых ключей", tagline: "Публиковать, находить и проверять сертификаты OpenPGP — и создавать идентификатор, который они несут.", t_search: "🔍 Поиск сертификатов", d_search: "Посмотреть сертификат или опубликовать свой. Собственно сервер ключей.", t_vcard: "🪪 PGP → vCard", d_vcard: "Превратить сертификат в контактную карточку, понятную вашей адресной книге.", t_eid: "🆔 Создать EID", d_eid: "Создать идентификатор сущности, который несёт сертификат PGP ID — из гражданского состояния (u4) или из места и мгновения (u5).", footer_home: "🏠 Главная", footer_search: "🔍 Поиск", footer_vcard: "🪪 Преобразовать PGP → vCard", footer_eid: "🆔 Создать EID", t_path: "🕸 Путь доверия", tag_exp: "экспериментально", d_path: "Найти цепочку сертификаций от одного ключа к другому.", l_from: "От", l_to: "К", btn_path: "Найти путь", ti_key: "Key id (16 шестнадцатеричных) или отпечаток, сокращаемый до key id." }
   };
 
   function pickLang() {
@@ -120,9 +151,38 @@
     var nodes = document.querySelectorAll("[data-i18n]");
     for (var i = 0; i < nodes.length; i++) {
       var k = nodes[i].getAttribute("data-i18n");
-      if (dict[k]) nodes[i].textContent = dict[k];
+      /* The heading carries its badge as a child element, so replacing
+         textContent would drop it: put the words in the first text node. */
+      if (!dict[k]) continue;
+      if (nodes[i].firstChild && nodes[i].firstChild.nodeType === 3 && nodes[i].children.length) {
+        nodes[i].firstChild.nodeValue = dict[k] + " ";
+      } else {
+        nodes[i].textContent = dict[k];
+      }
+    }
+    nodes = document.querySelectorAll("[data-i18n-value]");
+    for (var v = 0; v < nodes.length; v++) {
+      var kv = nodes[v].getAttribute("data-i18n-value");
+      if (dict[kv]) nodes[v].value = dict[kv];
+    }
+    nodes = document.querySelectorAll("[data-i18n-title]");
+    for (var t = 0; t < nodes.length; t++) {
+      var kt = nodes[t].getAttribute("data-i18n-title");
+      if (dict[kt]) nodes[t].setAttribute("title", dict[kt]);
     }
   }
+
+  /* gpgwww reads its parameters with strtoul(..., 16): a 40-digit
+     fingerprint overflows and it looks for 0xFFFFFFFFFFFFFFFF instead. The
+     last sixteen hex digits of a v4 fingerprint *are* the key id, so the
+     form hands over the key id and the visitor may paste either. */
+  document.getElementById("path-form").addEventListener("submit", function () {
+    ["from", "to"].forEach(function (id) {
+      var el = document.getElementById(id);
+      var hex = el.value.trim().replace(/^0[xX]/, "").toUpperCase();
+      el.value = hex.slice(-16);
+    });
+  });
 
   var sel = document.getElementById("lang-select");
   var lang = pickLang();

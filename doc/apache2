@@ -1,24 +1,37 @@
-Rough guide to onak and Apache2 on Debian:
+onak and Apache 2 on Debian
+===========================
 
-1) create a new virtual host for apache2 as the config snippet below in
-	/etc/apache2/sites-available/0xx-keyserver.conf and symlink it in
-	/etc/apache2/sites-enabled/
-2) edit the /etc/apache2/ports.conf file and add Listen 11371
-3) edit the /etc/apache2/sites-available/default file and change the
-	NameVirtualHost and VirtualHost directives to only play with
-	port 80
-4) make sure that suexec is *NOT* enabled in apache2 (remove the
-	suexec.load symlink from /etc/apache2/mods-enabled/ if it
-	exists), this is because suexec will not run the cgi scripts
-	located in the /usr/lib/cgi-bin/pks directory.
-5) a2enmod cgi
-6) apache2ctl graceful
-7) marvel as it all works.
+The package installs a ready virtual host as
 
-Apache2 config snippet:
-	<VirtualHost *:11371>
-		DocumentRoot /var/www/onak
-		ScriptAlias /pks /usr/lib/cgi-bin/pks
-		CustomLog /var/log/apache2/keyserver-access.log combined
-		ErrorLog /var/log/apache2/keyserver-error.log
-	</VirtualHost>
+	/etc/apache2/sites-available/onak-keyserver.conf
+
+so there is nothing to write. Turn it on with:
+
+	a2enmod cgi
+	echo 'Listen 11371' >> /etc/apache2/ports.conf
+	a2ensite onak-keyserver
+	apache2ctl configtest && systemctl reload apache2
+
+Two things that bite:
+
+ * suexec must NOT be enabled — it refuses to run the programs installed in
+   /usr/lib/cgi-bin/pks. Remove mods-enabled/suexec.load if it is there.
+
+ * The four CGI endpoints are aliased one by one (lookup, add, gpgwww,
+   hashquery) rather than the whole /pks/ prefix, so that the pages served
+   under /pks/ reach the document root instead of being looked for among the
+   programs. Keep it that way when adapting the file.
+
+What ends up where:
+
+	/                    /var/www/onak/index.html      landing page
+	/pks/                /var/www/onak/pks/index.html  search and publish
+	/pks/lookup          CGI                            HKP, and the web index
+	/pks/add             CGI                            HKP submission
+	/pks/gpgwww          CGI                            path finder (experimental)
+	/pks/hashquery       CGI                            SKS-style hash query
+	/pgp2vcard.html      /var/www/onak/                 certificate → contact card
+	/eid/                /var/www/onak/eid/             identifier generators
+
+For TLS, copy the ScriptAlias and Directory blocks into your own SSL virtual
+host; that is the whole of what onak needs.

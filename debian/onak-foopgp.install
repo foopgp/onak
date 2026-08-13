@@ -3,3 +3,8 @@ obj-*/cgi/add obj-*/cgi/lookup obj-*/cgi/gpgwww obj-*/cgi/hashquery  usr/lib/cgi
 templates/vanilla                                    usr/share/onak/templates
 templates/foopgp                                     usr/share/onak/templates
 html/index.html html/pgp2vcard.html html/openpgp.min.js   var/www/onak
+html/pks/index.html                                  var/www/onak/pks
+html/eid/index.html html/eid/udid2.html html/eid/sitemap.xml  var/www/onak/eid
+html/eid/u4/index.html                               var/www/onak/eid/u4
+html/eid/u5/index.html                               var/www/onak/eid/u5
+doc/onak-keyserver.conf                              etc/apache2/sites-available
