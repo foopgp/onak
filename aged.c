@@ -2,8 +2,8 @@
  * aged.c - Helpers and command drivers for the aged / dump-aged /
  *          clean-aged onak subcommands.
  *
- * Copyright 2026 Jean-Jacques Brucker (u4=sRyUhEbNU5OwyLEjfSwaXAe_42.17-002.76) <jjbrucker@foopgp.org>
- * Copyright 2026 Mneme (u5=001777236237.945e_43.30_005.38) <mneme@foopgp.org>
+ * Copyright 2026 Jean-Jacques Brucker (u4sRyUhEbNU5OwyLEjfSwaXAe_42.17-002.76) <jjbrucker@foopgp.org>
+ * Copyright 2026 Mneme (u5001777236237.945e_43.30_005.38) <mneme@foopgp.org>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
