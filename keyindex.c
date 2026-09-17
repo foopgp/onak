@@ -314,7 +314,7 @@ int list_uids(struct onak_dbctx *dbctx,
 			 * the browser fetch the wrong (typically: revoked)
 			 * photo blob for what is shown as the valid UAT.
 			 */
-			if (!verbose && signedpacket_is_revoked(uids)) {
+			if (!verbose && signedpacket_is_revoked(uids, keyid)) {
 				/* skip in op=index ; nothing to print */
 			} else {
 				printf("                                ");
@@ -663,7 +663,7 @@ static char *extract_uid_email(const char *text, size_t len)
 }
 
 static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
-		struct openpgp_signedpacket_list *uids,
+		uint64_t keyid, struct openpgp_signedpacket_list *uids,
 		struct openpgp_signedpacket_list *skip, bool verbose)
 {
 	struct tmpl_value *out = tmpl_list();
@@ -700,7 +700,7 @@ static struct tmpl_value *build_uid_list(struct onak_dbctx *dbctx,
 			continue;
 		}
 
-		revoked = signedpacket_is_revoked(uids);
+		revoked = signedpacket_is_revoked(uids, keyid);
 		if (!verbose && revoked) {
 			/*
 			 * op=index is the compact public listing; a
@@ -968,7 +968,7 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 	curuid = key->uids;
 	while (curuid != NULL) {
 		if (curuid->packet->tag == OPENPGP_PACKET_UID &&
-				!signedpacket_is_revoked(curuid)) {
+				!signedpacket_is_revoked(curuid, keyid)) {
 			break;
 		}
 		curuid = curuid->next;
@@ -1011,7 +1011,7 @@ static struct tmpl_value *build_one_key(struct onak_dbctx *dbctx,
 	}
 
 	tmpl_map_set(m, "other_uids",
-		build_uid_list(dbctx, key->uids, curuid, verbose));
+		build_uid_list(dbctx, keyid, key->uids, curuid, verbose));
 
 	if (verbose) {
 		tmpl_map_set(m, "subkeys",
@@ -1283,6 +1283,17 @@ int mrkey_index(struct openpgp_publickey *keys)
 	struct openpgp_fingerprint fingerprint;
 
 	while (keys != NULL) {
+		/*
+		 * Needed below whatever the key version: the UID filter asks
+		 * whether a revocation came from this key itself. A v4/v5 row
+		 * prints the fingerprint rather than the keyid, but still has
+		 * to know it.
+		 */
+		keyid = 0;
+		if (get_keyid(keys, &keyid) != ONAK_E_OK) {
+			logthing(LOGTHING_ERROR, "Couldn't get keyid");
+		}
+
 		created_time = (keys->publickey->data[1] << 24) +
 					(keys->publickey->data[2] << 16) +
 					(keys->publickey->data[3] << 8) +
@@ -1293,9 +1304,6 @@ int mrkey_index(struct openpgp_publickey *keys)
 		switch (keys->publickey->data[0]) {
 		case 2:
 		case 3:
-			if (get_keyid(keys, &keyid) != ONAK_E_OK) {
-				logthing(LOGTHING_ERROR, "Couldn't get keyid");
-			}
 			printf("%016" PRIX64, keyid);
 			type = keys->publickey->data[7];
 			break;
@@ -1338,7 +1346,7 @@ int mrkey_index(struct openpgp_publickey *keys)
 			if (curuid->packet->tag != OPENPGP_PACKET_UID) {
 				continue;
 			}
-			if (signedpacket_is_revoked(curuid)) {
+			if (signedpacket_is_revoked(curuid, keyid)) {
 				continue;
 			}
 			printf("uid:");

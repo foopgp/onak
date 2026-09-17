@@ -430,15 +430,24 @@ static int cap_packet_type(struct openpgp_publickey *key,
 	bool                              primary_kept = false;
 	bool                              anchor_kept = false;
 	bool                              is_rev;
+	uint64_t                          keyid;
 
 	log_assert(key != NULL);
+	/* Whose revocations count here: only the key's own withdraw an
+	 * identity of its own (see signedpacket_is_revoked). A keyid of 0
+	 * matches nothing, so an unreadable key treats every UID as live —
+	 * the safe way round for a function that drops packets. */
+	keyid = 0;
+	if (get_keyid(key, &keyid) != ONAK_E_OK) {
+		logthing(LOGTHING_ERROR, "Couldn't get keyid");
+	}
 	/* Pass 1: count matching packets, split by revocation state — two
 	 * independent FIFOs so a flood of revoked UIDs/UATs can never evict
 	 * the still-usable ones. */
 	for (curuid = &key->uids; *curuid != NULL;
 			curuid = &(*curuid)->next) {
 		if ((*curuid)->packet->tag == tag) {
-			if (signedpacket_is_revoked(*curuid)) {
+			if (signedpacket_is_revoked(*curuid, keyid)) {
 				revoked++;
 			} else {
 				active++;
@@ -460,7 +469,7 @@ static int cap_packet_type(struct openpgp_publickey *key,
 			curuid = &(*curuid)->next;
 			continue;
 		}
-		is_rev = signedpacket_is_revoked(*curuid);
+		is_rev = signedpacket_is_revoked(*curuid, keyid);
 		if (is_rev) {
 			if (drop_revoked == 0) {
 				curuid = &(*curuid)->next;

@@ -110,13 +110,18 @@ enum onak_oid {
 enum onak_oid onak_parse_oid(uint8_t *buf, size_t len);
 
 /**
- *	signedpacket_is_revoked - is this UID/UAT revoked?
+ *	signedpacket_is_revoked - is this UID/UAT revoked by its owner?
  *	@sp: the signed packet (a UID or a UAT).
+ *	@keyid: the key id of the key that carries @sp.
  *
  *	Returns true if @sp carries a v4/v5 certification-revocation
- *	signature (sigtype 0x30). The revocation is NOT authenticated (same
- *	heuristic the rest of onak applies at display / cap time).
+ *	signature (sigtype 0x30) issued by @keyid itself. A 0x30 from another
+ *	key withdraws *that* key's certification and leaves the identity
+ *	standing, so it does not count. The signature is NOT verified (same
+ *	heuristic the rest of onak applies at display / cap time); only its
+ *	issuer is read.
  */
-bool signedpacket_is_revoked(struct openpgp_signedpacket_list *sp);
+bool signedpacket_is_revoked(struct openpgp_signedpacket_list *sp,
+		uint64_t keyid);
 
 #endif

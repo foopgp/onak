@@ -455,7 +455,8 @@ enum onak_oid onak_parse_oid(uint8_t *buf, size_t len)
 	return oid;
 }
 
-bool signedpacket_is_revoked(struct openpgp_signedpacket_list *sp)
+bool signedpacket_is_revoked(struct openpgp_signedpacket_list *sp,
+		uint64_t keyid)
 {
 	struct openpgp_packet_list *sigs;
 
@@ -467,10 +468,24 @@ bool signedpacket_is_revoked(struct openpgp_signedpacket_list *sp)
 				sigs->packet->length < 2) {
 			continue;
 		}
-		if ((sigs->packet->data[0] == 4 ||
-				sigs->packet->data[0] == 5) &&
-				sigs->packet->data[1] ==
+		if ((sigs->packet->data[0] != 4 &&
+				sigs->packet->data[0] != 5) ||
+				sigs->packet->data[1] !=
 					OPENPGP_SIGTYPE_CERT_REV) {
+			continue;
+		}
+		/*
+		 * By the key's own hand, or it revokes nothing here. A 0x30
+		 * from anybody else is that signer taking back *their*
+		 * certification of this identity -- which says something
+		 * about the signer, not about the identity. Counted as the
+		 * owner's word, it showed two live addresses of a real
+		 * certificate as revoked the day somebody withdrew their
+		 * vouching (keys.foopgp.org, 2026-09-17), and it let
+		 * cleankey file a live UID under the revoked cap, where the
+		 * FIFO drops it sooner.
+		 */
+		if (sig_keyid(sigs->packet) == keyid) {
 			return true;
 		}
 	}
