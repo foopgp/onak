@@ -46,6 +46,31 @@
 #define OP_PHOTO   4
 #define OP_HGET    5
 
+/*
+ * How many searches one op=get may carry: the largest round number whose
+ * request line -- 74 bytes a v6 fingerprint, "&search=0x" included -- fits
+ * under the 8 KB that Apache and nginx accept by default. Announced to the
+ * client in X-HKP-Multi-Search on every get.
+ */
+#define MULTI_SEARCH_MAX 100
+
+/*
+ * The header block, once the answer is known: a status first when it is not
+ * 200, then the type. Written after the lookup rather than before it,
+ * because a header written first cannot say that nothing was found.
+ */
+static void headers(const char *status, bool html)
+{
+	if (status != NULL) {
+		printf("Status: %s\n", status);
+	}
+	if (html) {
+		start_html("Lookup of key");
+	} else {
+		puts("Content-Type: text/plain\n");
+	}
+}
+
 void find_keys(struct onak_dbctx *dbctx,
 		char *search, uint64_t keyid,
 		struct openpgp_fingerprint *fingerprint,
@@ -65,6 +90,7 @@ void find_keys(struct onak_dbctx *dbctx,
 		count = dbctx->fetch_key_text(dbctx, search, &publickey);
 	}
 	if (publickey != NULL) {
+		headers(NULL, !mrhkp);
 		if (mrhkp) {
 			printf("info:1:%d\n", count);
 			mrkey_index(publickey);
@@ -74,6 +100,8 @@ void find_keys(struct onak_dbctx *dbctx,
 		}
 		free_publickey(publickey);
 	} else if (count == 0) {
+		/* The HKP draft asks the same 404 of an index as of a get. */
+		headers("404 Not Found", !mrhkp);
 		if (mrhkp) {
 			puts("info:1:0");
 		} else {
@@ -88,6 +116,7 @@ void find_keys(struct onak_dbctx *dbctx,
 			key_index(dbctx, NULL, verbose, dispfp, skshash, true);
 		}
 	} else {
+		headers(NULL, !mrhkp);
 		if (mrhkp) {
 			puts("info:1:0");
 		} else {
@@ -113,11 +142,107 @@ static uint8_t hex2bin(char c)
 	return 255;
 }
 
+/*
+ * What a search names: a v4 or v6 fingerprint written 0x and its hex, a key
+ * ID in hex with or without 0x, or else text.
+ */
+static void parse_search(const char *search, uint64_t *keyid,
+		struct openpgp_fingerprint *fingerprint,
+		bool *ishex, bool *isfp)
+{
+	char *end = NULL;
+	size_t len = strlen(search);
+	int j;
+
+	*ishex = false;
+	*isfp = false;
+	if ((len == 42 || len == 66) && search[0] == '0' && search[1] == 'x') {
+		fingerprint->length = (len - 2) / 2;
+		for (j = 0; j < fingerprint->length; j++) {
+			fingerprint->fp[j] = (hex2bin(search[2 + j * 2]) << 4) +
+				hex2bin(search[3 + j * 2]);
+		}
+		*isfp = true;
+	} else {
+		*keyid = strtoull(search, &end, 16);
+		if (*search != 0 && end != NULL && *end == 0) {
+			*ishex = true;
+		}
+	}
+}
+
+/* Whether [keys] already holds [key], by fingerprint. */
+static bool held(struct openpgp_publickey *keys, struct openpgp_publickey *key)
+{
+	struct openpgp_fingerprint a, b;
+
+	if (get_fingerprint(key->publickey, &a) != ONAK_E_OK) {
+		return false;
+	}
+	for (; keys != NULL; keys = keys->next) {
+		if (get_fingerprint(keys->publickey, &b) == ONAK_E_OK &&
+				a.length == b.length &&
+				!memcmp(a.fp, b.fp, a.length)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/*
+ * Several searches in one get, each a key ID or a fingerprint written 0x:
+ * text is left out, being the one search that can match thousands. Each is
+ * fetched into a list of its own, and the keys joined once each -- two
+ * searches may name one key. Returns how many keys, or -1 when a search is
+ * not a 0x one, before anything is fetched.
+ */
+static int fetch_many(struct onak_dbctx *dbctx, char **searches, int n,
+		struct openpgp_publickey **keys)
+{
+	struct openpgp_publickey *found, *key, *next;
+	struct openpgp_publickey **tail = keys;
+	struct openpgp_fingerprint fingerprint;
+	uint64_t keyid = 0;
+	bool ishex, isfp;
+	int i, count = 0;
+
+	for (i = 0; i < n; i++) {
+		if (searches[i][0] != '0' || searches[i][1] != 'x') {
+			return -1;
+		}
+		parse_search(searches[i], &keyid, &fingerprint, &ishex, &isfp);
+		if (!ishex && !isfp) {
+			return -1;
+		}
+	}
+	for (i = 0; i < n; i++) {
+		found = NULL;
+		parse_search(searches[i], &keyid, &fingerprint, &ishex, &isfp);
+		if (isfp) {
+			dbctx->fetch_key_fp(dbctx, &fingerprint, &found, false);
+		} else {
+			dbctx->fetch_key_id(dbctx, keyid, &found, false);
+		}
+		for (key = found; key != NULL; key = next) {
+			next = key->next;
+			key->next = NULL;
+			if (held(*keys, key)) {
+				free_publickey(key);
+				continue;
+			}
+			*tail = key;
+			tail = &key->next;
+			count++;
+		}
+	}
+	return count;
+}
+
 int main(int argc, char *argv[])
 {
 	char **params = NULL;
 	int op = OP_UNKNOWN;
-	int i, j;
+	int i;
 	int indx = 0;
 	bool dispfp = false;
 	bool skshash = false;
@@ -128,7 +253,9 @@ int main(int argc, char *argv[])
 	uint64_t keyid = 0;
 	struct openpgp_fingerprint fingerprint;
 	char *search = NULL;
-	char *end = NULL;
+	char *searches[MULTI_SEARCH_MAX];
+	int nsearch = 0;
+	bool toomany = false;
 	char *contact_copy = NULL;
 	struct openpgp_publickey *publickey = NULL;
 	struct openpgp_packet_list *packets = NULL;
@@ -152,37 +279,14 @@ int main(int argc, char *argv[])
 				op = OP_PHOTO;
 			}
 		} else if (!strcmp(params[i], "search")) {
-			search = params[i+1];
-			params[i+1] = NULL;
-			if (search != NULL && strlen(search) == 42 &&
-					search[0] == '0' && search[1] == 'x') {
-				/* v4 fingerprint */
-				fingerprint.length = 20;
-				for (j = 0; j < 20; j++) {
-					fingerprint.fp[j] = (hex2bin(
-							search[2 + j * 2])
-								<< 4) +
-						hex2bin(search[3 + j * 2]);
-				}
-				isfp = true;
-			} else if (search != NULL && strlen(search) == 66 &&
-					search[0] == '0' && search[1] == 'x') {
-				/* v5 fingerprint */
-				fingerprint.length = 32;
-				for (j = 0; j < 32; j++) {
-					fingerprint.fp[j] = (hex2bin(
-							search[2 + j * 2])
-								<< 4) +
-						hex2bin(search[3 + j * 2]);
-				}
-				isfp = true;
-			} else if (search != NULL) {
-				keyid = strtoull(search, &end, 16);
-				if (*search != 0 &&
-						end != NULL &&
-						*end == 0) {
-					ishex = true;
-				}
+			/* Every one kept, for op=get; the others read the last. */
+			if (params[i+1] == NULL) {
+				/* nothing to keep */
+			} else if (nsearch < MULTI_SEARCH_MAX) {
+				searches[nsearch++] = params[i+1];
+				params[i+1] = NULL;
+			} else {
+				toomany = true;
 			}
 		} else if (!strcmp(params[i], "idx")) {
 			indx = atoi(params[i+1]);
@@ -219,6 +323,10 @@ int main(int argc, char *argv[])
 		free(params);
 		params = NULL;
 	}
+	if (nsearch > 0) {
+		search = searches[nsearch - 1];
+		parse_search(search, &keyid, &fingerprint, &ishex, &isfp);
+	}
 
 	/*
 	 * op=get / op=hget response is served as a downloadable .asc file
@@ -238,27 +346,18 @@ int main(int argc, char *argv[])
 	puts("Access-Control-Allow-Origin: *");
 
 	/*
-	 * A download writes its own headers once it knows what it has: the
-	 * key's type and name, or a 404. Closing the block here for options=mr
-	 * sent those into the body instead.
+	 * Every operation writes its own headers once it knows its answer: a
+	 * download its key's type and name, a lookup that found nothing its
+	 * 404, a photo its image. A header block closed up front sent those
+	 * into the body instead.
 	 */
-	if (mrhkp && !is_download) {
-		puts("Content-Type: text/plain\n");
-	} else if (op == OP_PHOTO) {
-		/* Headers deferred to the OP_PHOTO branch: only after
-		 * getphoto() do we know whether this is an image (200) or a
-		 * miss (404). Emitting "Content-Type: image/jpeg" up front is
-		 * what made a bad idx serve the HTML footer as a broken JPEG. */
-	} else if (!is_download) {
-		start_html("Lookup of key");
-	}
+	bool html = !mrhkp && !is_download && op != OP_PHOTO;
 
 	if (op == OP_UNKNOWN) {
+		headers(NULL, html);
 		puts("Error: No operation supplied.");
 	} else if (search == NULL) {
-		if (is_download) {
-			puts("Content-Type: text/plain\n");
-		}
+		headers(NULL, html);
 		puts("Error: No key to search for supplied.");
 	} else {
 		readconfig(NULL);
@@ -268,8 +367,8 @@ int main(int argc, char *argv[])
 		if (dbctx == NULL) {
 			logthing(LOGTHING_ERROR,
 				"Failed to open key database.");
-			if (is_download) {
-				puts("Content-Type: text/plain\n");
+			headers(NULL, html);
+			if (!html) {
 				puts("Key database unavailable");
 			}
 			goto err;
@@ -277,7 +376,28 @@ int main(int argc, char *argv[])
 		switch (op) {
 		case OP_GET:
 		case OP_HGET:
-			if (op == OP_HGET) {
+			if (op == OP_GET) {
+				/* On every get, so a client learns it from the
+				 * first answer, whatever that answer is. */
+				printf("X-HKP-Multi-Search: %d\n",
+					MULTI_SEARCH_MAX);
+			}
+			if (op == OP_GET && toomany) {
+				headers("413 Content Too Large", false);
+				printf("At most %d searches in one request.\n",
+					MULTI_SEARCH_MAX);
+				break;
+			}
+			if (op == OP_GET && nsearch > 1) {
+				result = fetch_many(dbctx, searches, nsearch,
+					&publickey);
+				if (result < 0) {
+					headers("400 Bad Request", false);
+					puts("Several searches must each be "
+						"a 0x key ID or fingerprint.");
+					break;
+				}
+			} else if (op == OP_HGET) {
 				parse_skshash(search, &hash);
 				result = dbctx->fetch_key_skshash(dbctx,
 					&hash, &publickey);
@@ -308,8 +428,10 @@ int main(int argc, char *argv[])
 				 * back to a plain Content-Type with no
 				 * attachment name.
 				 */
-				if (get_fingerprint(publickey->publickey,
-						&got_fp) == ONAK_E_OK) {
+				if (publickey->next == NULL &&
+						get_fingerprint(
+							publickey->publickey,
+							&got_fp) == ONAK_E_OK) {
 					for (fi = 0; fi < got_fp.length;
 							fi++) {
 						snprintf(fpbuf + fi * 2,
@@ -344,8 +466,7 @@ int main(int argc, char *argv[])
 					search);
 				/* The HKP draft's answer, and the only one a
 				 * client can tell from a certificate. */
-				puts("Status: 404 Not Found");
-				puts("Content-Type: text/plain\n");
+				headers("404 Not Found", false);
 				puts("Key not found");
 			}
 			break;
@@ -379,15 +500,13 @@ int main(int argc, char *argv[])
 							length,
 							stdout);
 				} else {
-					puts("Status: 404 Not Found");
-					puts("Content-Type: text/plain\n");
+					headers("404 Not Found", false);
 					puts("No photo at that index.");
 				}
 				free_publickey(publickey);
 				publickey = NULL;
 			} else {
-				puts("Status: 404 Not Found");
-				puts("Content-Type: text/plain\n");
+				headers("404 Not Found", false);
 				puts("No such key.");
 			}
 			break;
@@ -424,9 +543,8 @@ err:
 		contact_copy = NULL;
 	}
 
-	if (search != NULL) {
-		free(search);
-		search = NULL;
+	for (i = 0; i < nsearch; i++) {
+		free(searches[i]);
 	}
 
 	return (EXIT_SUCCESS);

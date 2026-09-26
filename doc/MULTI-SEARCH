@@ -1,0 +1,52 @@
+Multi-search: several keys in one op=get
+========================================
+
+An onak extension to HKP. The HKP draft (draft-gallagher-openpgp-hkp) has no
+way to ask for several certificates at once, so a client refreshing fifty of
+them makes fifty requests. Here it makes one.
+
+Request
+-------
+
+    GET /pks/lookup?op=get&search=0x<id>&search=0x<id>&...[&options=mr]
+
+- Each search is a key ID (16 or 8 hex digits) or a fingerprint (40 or 64),
+  written with its 0x. A text search among several is refused: it is the one
+  search that can match thousands of keys.
+- At most 100 searches. That is the largest round number whose request line
+  fits under the 8 KB that Apache and nginx accept by default, at 74 bytes
+  per v6 fingerprint.
+- A single search is unchanged, text included.
+
+Response
+--------
+
+- Every op=get answer carries the header
+
+      X-HKP-Multi-Search: 100
+
+  naming the limit. A client learns from its first get, of any kind, whether
+  the server takes several searches, and how many.
+- 200: one armored block holding every certificate found, each once, however
+  many searches named it. Searches that found nothing are simply absent.
+- 404: none of them found anything.
+- 400: several searches, one of which is not a 0x key ID or fingerprint.
+- 413: more searches than the limit.
+
+For a client
+------------
+
+Without the header, the server does not know this extension. It has then
+answered one of the searches only, the first or the last depending on the
+implementation: ask for the others one at a time, and stop sending several
+to that server for the rest of the session. The number of certificates in
+the answer says nothing either way: a server that knows the extension may
+hold only one of the keys asked for, and a single key ID may match two
+certificates.
+
+Also here
+---------
+
+An op=get or op=index that matches nothing answers 404, as the HKP draft
+asks, with options=mr as without it. It used to answer 200, with a sentence
+for op=get and "info:1:0" for op=index.
