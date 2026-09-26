@@ -237,7 +237,12 @@ int main(int argc, char *argv[])
 	 * responses cross-origin: everything served here is public key material. */
 	puts("Access-Control-Allow-Origin: *");
 
-	if (mrhkp) {
+	/*
+	 * A download writes its own headers once it knows what it has: the
+	 * key's type and name, or a 404. Closing the block here for options=mr
+	 * sent those into the body instead.
+	 */
+	if (mrhkp && !is_download) {
 		puts("Content-Type: text/plain\n");
 	} else if (op == OP_PHOTO) {
 		/* Headers deferred to the OP_PHOTO branch: only after
@@ -337,6 +342,9 @@ int main(int argc, char *argv[])
 				logthing(LOGTHING_NOTICE,
 					"Failed to find key for search %s",
 					search);
+				/* The HKP draft's answer, and the only one a
+				 * client can tell from a certificate. */
+				puts("Status: 404 Not Found");
 				puts("Content-Type: text/plain\n");
 				puts("Key not found");
 			}
