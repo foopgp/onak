@@ -10,7 +10,7 @@ trap cleanup exit
 cleanup () {
 	rm ${WORKDIR}/onak.ini
 }
-if ! XDG_CONFIG_HOME=${WORKDIR} ${BUILDDIR}/cgi/lookup "op=index&search=0x2DA8B985" 2> /dev/null | \
+if ! XDG_CONFIG_HOME=${WORKDIR} ${BUILDDIR}/cgi/lookup "op=index&search=0x94FA372B2DA8B985" 2> /dev/null | \
 	grep -q -- 'Jonathan McDowell'; then
 	echo "* Could not lookup key using lookup CGI."
 

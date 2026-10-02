@@ -142,32 +142,52 @@ static uint8_t hex2bin(char c)
 	return 255;
 }
 
+/* Whether [s] is [n] hex digits and nothing else. */
+static bool all_hex(const char *s, size_t n)
+{
+	size_t i;
+
+	for (i = 0; i < n; i++) {
+		if (hex2bin(s[i]) == 255) {
+			return false;
+		}
+	}
+	return s[n] == 0;
+}
+
+/* Whether [search] is written as a key ID or a fingerprint: it opens with 0x. */
+static bool is_0x(const char *search)
+{
+	return search[0] == '0' && (search[1] == 'x' || search[1] == 'X');
+}
+
 /*
- * What a search names: a v4 or v6 fingerprint written 0x and its hex, a key
- * ID in hex with or without 0x, or else text.
+ * What a search names: a v4 or v6 fingerprint written 0x and its hex, a long
+ * key ID -- 16 hex digits, with or without 0x --, or else text. A short key
+ * ID of 8 is neither: 32 bits collide by design, and the HKP draft forbids
+ * answering one. A 0x search that is neither is refused by the caller, not
+ * read as text.
  */
 static void parse_search(const char *search, uint64_t *keyid,
 		struct openpgp_fingerprint *fingerprint,
 		bool *ishex, bool *isfp)
 {
-	char *end = NULL;
-	size_t len = strlen(search);
+	const char *hex = is_0x(search) ? search + 2 : search;
+	size_t len = strlen(hex);
 	int j;
 
 	*ishex = false;
 	*isfp = false;
-	if ((len == 42 || len == 66) && search[0] == '0' && search[1] == 'x') {
-		fingerprint->length = (len - 2) / 2;
+	if (is_0x(search) && (len == 40 || len == 64) && all_hex(hex, len)) {
+		fingerprint->length = len / 2;
 		for (j = 0; j < fingerprint->length; j++) {
-			fingerprint->fp[j] = (hex2bin(search[2 + j * 2]) << 4) +
-				hex2bin(search[3 + j * 2]);
+			fingerprint->fp[j] = (hex2bin(hex[j * 2]) << 4) +
+				hex2bin(hex[j * 2 + 1]);
 		}
 		*isfp = true;
-	} else {
-		*keyid = strtoull(search, &end, 16);
-		if (*search != 0 && end != NULL && *end == 0) {
-			*ishex = true;
-		}
+	} else if (len == 16 && all_hex(hex, len)) {
+		*keyid = strtoull(hex, NULL, 16);
+		*ishex = true;
 	}
 }
 
@@ -207,7 +227,7 @@ static int fetch_many(struct onak_dbctx *dbctx, char **searches, int n,
 	int i, count = 0;
 
 	for (i = 0; i < n; i++) {
-		if (searches[i][0] != '0' || searches[i][1] != 'x') {
+		if (!is_0x(searches[i])) {
 			return -1;
 		}
 		parse_search(searches[i], &keyid, &fingerprint, &ishex, &isfp);
@@ -359,6 +379,11 @@ int main(int argc, char *argv[])
 	} else if (search == NULL) {
 		headers(NULL, html);
 		puts("Error: No key to search for supplied.");
+	} else if (op != OP_HGET && op != OP_PHOTO && nsearch == 1 &&
+			is_0x(search) && !ishex && !isfp) {
+		headers("400 Bad Request", html);
+		puts("Error: a 0x search is a key ID of 16 hex digits or a "
+			"fingerprint of 40 or 64; short key IDs are not accepted.");
 	} else {
 		readconfig(NULL);
 		initlogthing("lookup", config.logfile);

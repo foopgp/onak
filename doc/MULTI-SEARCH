@@ -10,8 +10,9 @@ Request
 
     GET /pks/lookup?op=get&search=0x<id>&search=0x<id>&...[&options=mr]
 
-- Each search is a key ID (16 or 8 hex digits) or a fingerprint (40 or 64),
-  written with its 0x. A text search among several is refused: it is the one
+- Each search is a key ID (16 hex digits) or a fingerprint (40 or 64),
+  written with its 0x. A short key ID of 8 is refused, alone or among
+  several: 32 bits collide by design, and the HKP draft forbids it. A text search among several is refused: it is the one
   search that can match thousands of keys.
 - At most 100 searches. That is the largest round number whose request line
   fits under the 8 KB that Apache and nginx accept by default, at 74 bytes
