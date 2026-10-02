@@ -312,7 +312,23 @@ Everything runs in your browser — nothing is uploaded.</p>
     }
     else if (eidList.length === 0) warns.push({ t: "err", m: t("m_noeid").replace("%f", label) });
     else warns.push({ t: "err", m: t("m_multieid").replace("%f", label).replace("%n", eidList.length) });
-    emails.forEach(function (e, i) { props.push(["email", e, i + 1]); });
+    // PREF=1 is the address of the uid flagged primary -- its newest
+    // self-certification carries the Primary User ID subpacket -- and nobody
+    // else's: when that uid carries none, no address is the preferred one.
+    // The others follow from 2 (draft-foopgp-openpgp-vcard §4.4, as pgpid
+    // cert_tovcard and foodjis).
+    var primaryEmail = null;
+    uids.forEach(function (u) {
+      var newest = null;
+      (u.selfCertifications || []).forEach(function (c) {
+        if (!newest || c.created > newest.created) newest = c;
+      });
+      if (newest && newest.isPrimaryUserID && u.userID.email &&
+          !PROP_RE.exec(u.userID.userID || "")) primaryEmail = u.userID.email;
+    });
+    if (primaryEmail) props.push(["email", primaryEmail, 1]);
+    emails.filter(function (e) { return e !== primaryEmail; })
+      .forEach(function (e, i) { props.push(["email", e, i + 2]); });
     extra.forEach(function (line) { props.push(["vcardline", line]); });   // NOTE/ADR/TEL/URL/LANG/GEO… carried from the cert
 
     // KEY inline: minimised cert (no UAT, no third-party sigs). The photo, if any,
